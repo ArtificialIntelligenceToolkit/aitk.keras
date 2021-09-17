@@ -11,6 +11,7 @@ class Model():
         self.name = name
         self.compiled = False
         self._layers = layers if layers is not None else []
+        self.train = False
 
     @property
     def layers(self):
@@ -77,10 +78,45 @@ class Sequential(Model):
         if not self.compiled:
             self.compile()
         for layer in self._layers:
+            if self.train:
+                layer.previous_inputs = inputs
             outputs = inputs = layer(inputs)
+            if self.train:
+                layer.previous_outputs = outputs
         return outputs
 
     def compile(self):
         for layer in self._layers:
             layer.compile()
         self.compiled = True
+
+    def fit(self, inputs, targets, batch_size=None, epochs=1):
+        self.step = 0
+        self.train = True # signal for predict to save intermediate values
+        for epoch in range(epochs):
+            for batch_data in self.enumerate_batches(inputs, targets, batch_size):
+                self.train_batch(batch_data)
+                self.step += 1
+        self.train = False
+
+    def enumerate_batches(self, inputs, targets, batch_size):
+        # FIXME: break into batches
+        yield (inputs, targets)
+
+    def compute_loss(self, outputs, targets):
+        # respect things like sme, etc
+        return (targets - outputs)
+
+    def train_batch(self, batch_data):
+        inputs, targets = batch_data
+        outputs = self.predict(inputs)
+        loss = self.compute_loss(outputs, targets)
+        self.update_weights(loss, len(inputs))
+
+    def update_weights(self, loss, n):
+        for i, layer in enumerate(reversed(self.layers)):
+            layer.delta_weights = 1/n * (loss @ layer.previous_inputs.T)
+            layer.delta_biases = np.mean(loss, axis=1, keepdims=True)
+            dAl = layer.weights[0].T @ loss
+            # Compute loss for next layer:
+            loss = layer.activation.derivative(layer.previous_outputs) * dAl

@@ -24,13 +24,23 @@ class Tanh(Activation):
     def __call__(self, outputs):
         return np.tanh(outputs)
 
+    def derivative(self, X):
+        return 1 - np.tanh(X) ** 2
+
 class Sigmoid(Activation):
     def __call__(self, outputs):
         return 1/(1 + np.exp(-outputs))
 
+    def derivative(self, X):
+        sigmoid = self(X)
+        return sigmoid * (1 - sigmoid)
+
 class Linear(Activation):
     def __call__(self, outputs):
         return outputs
+
+    def derivative(self, X):
+        return X
 
 ACTIVATIONS = {
     "relu": Relu,
