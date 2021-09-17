@@ -26,9 +26,13 @@ def build_model_aitk():
 model_tf = build_model_tf()
 print(model_tf.predict([[1, 1]]))
 
-w = model_tf.get_weights()
+w1 = model_tf.get_weights()
+print("model_tf weights", w1)
 
 model_aitk = build_model_aitk()
-model_aitk.set_weights(w)
-print(model_aitk.predict([[1, 1]]))
+model_aitk.set_weights(w1)
 
+w2 = model_aitk.get_weights()
+print("model_aitk weights", w2)
+
+print(model_aitk.predict([[1, 1]]))
