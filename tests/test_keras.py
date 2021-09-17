@@ -4,10 +4,10 @@ def build_model_tf():
     from tensorflow.keras.models import Sequential
 
     model = Sequential()
-    model.add(InputLayer(2))
-    model.add(Dense(2, activation="relu"))
-    model.add(Dense(1, activation="tanh"))
-    model.add(Dense(1, activation="sigmoid"))
+    model.add(InputLayer(2, name="input"))
+    model.add(Dense(2, activation="relu", name="hidden1"))
+    model.add(Dense(1, activation="tanh", name="hidden2"))
+    model.add(Dense(2, activation="sigmoid", name="output"))
     model.compile()
     return model
 
@@ -16,10 +16,10 @@ def build_model_aitk():
     from aitk.keras.models import Sequential
 
     model = Sequential()
-    model.add(InputLayer(2))
-    model.add(Dense(2, activation="relu"))
-    model.add(Dense(1, activation="tanh"))
-    model.add(Dense(1, activation="sigmoid"))
+    model.add(InputLayer(2, name="input"))
+    model.add(Dense(2, activation="relu", name="hidden1"))
+    model.add(Dense(1, activation="tanh", name="hidden2"))
+    model.add(Dense(2, activation="sigmoid", name="output"))
     model.compile()
     return model
 
