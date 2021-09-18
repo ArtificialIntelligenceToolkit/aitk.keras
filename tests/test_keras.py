@@ -90,3 +90,21 @@ def test_fit():
     for optimizer in ["adam", "rmsprop"]: # sgd diverages; lr and momentum the same
         for loss in ["mse"]:
             compare_models(optimizer, loss)
+
+def test_functional_model():
+    from aitk.keras.layers import InputLayer, Dense, Activation
+    from aitk.keras.models import Model
+
+    optimizer, loss = "adam", "mse"
+
+    l1 = InputLayer(2, name="input")
+    l2 = Dense(8, activation="tanh", name="hidden")
+    l3 = Dense(1, activation="sigmoid", name="output")
+
+    output_layer = l3(l2(l1))
+    input_layer = l1
+    model = Model(input_layer, output_layer)
+    model.compile(optimizer=optimizer, loss=loss)
+
+    outputs = model.predict(inputs)
+    assert outputs.shape == (4, 1)

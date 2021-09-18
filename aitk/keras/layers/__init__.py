@@ -27,36 +27,42 @@ class Activation():
     def __init__(self, activation):
         self.activation = activation
 
+NAME_CACHE = {}
+
 class LayerBase(ABC):
     def __init__(self, name=None):
         """An abstract base class inherited by all neural network layers"""
-        self.name_cache = {}
         self.X = []
         self.act_fn = None
         self.trainable = True
         self.name = self.make_name(name)
         self.optimizer = None
-        self.default_weight_optimizer = "glorot_uniform"
+        self.default_kernel_optimizer = "glorot_uniform"
 
         self.gradients = {}
         self.parameters = {}
         self.derived_variables = {}
         self.input_layers = []
+        self.output_layers = []
 
         super().__init__()
+
+    def __call__(self, input_layer):
+        input_layer.output_layers.append(self)
+        return self
 
     def make_name(self, name):
         if name is None:
             class_name = self.__class__.__name__.lower()
-            count = self.name_cache.get(class_name, 0)
+            count = NAME_CACHE.get(class_name, 0)
             new_name = "%s_%s" % (class_name, count + 1)
-            self.name_cache[class_name] = count + 1
+            NAME_CACHE[class_name] = count + 1
             return new_name
         else:
             return name
 
     def set_optimizer(self, optimizer=None):
-        optimizer = optimizer or self.default_optimizer
+        optimizer = optimizer or self.default_kernel_optimizer
         self.optimizer = OptimizerInitializer(optimizer)()
 
     @abstractmethod
@@ -188,6 +194,8 @@ class InputLayer(LayerBase):
 
     def _init_params(self, **kwargs):
         raise NotImplementedError
+
+Input = InputLayer
 
 class DotProductAttention(LayerBase):
     def __init__(self, scale=True, dropout_p=0, kernel_initializer="glorot_uniform", name=None):

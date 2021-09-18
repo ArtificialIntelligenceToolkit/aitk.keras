@@ -12,12 +12,31 @@ LOSS_FUNCTIONS = {
     "crossentropy": CrossEntropy,
 }
 
+NAME_CACHE = {}
+
 class Model():
-    def __init__(self, name=None, layers=None):
-        self.name = name
+    def __init__(self, inputs=None, outputs=None, name=None, layers=None):
+        self.name = self.make_name(name)
         self._layers = layers if layers is not None else []
         self.train = True
         self.step = 0
+        if inputs is not None:
+            while True:
+                self.add(inputs)
+                if inputs == outputs:
+                    break
+                # FIXME: using only one input; need to make graph
+                inputs = inputs.output_layers[0]
+
+    def make_name(self, name):
+        if name is None:
+            class_name = self.__class__.__name__.lower()
+            count = NAME_CACHE.get(class_name, 0)
+            new_name = "%s_%s" % (class_name, count + 1)
+            NAME_CACHE[class_name] = count + 1
+            return new_name
+        else:
+            return name
 
     def summary(self):
         print(f'Model: "{self.name}"')
@@ -153,11 +172,6 @@ class Model():
             layer.update(batch_loss)
         self.flush_gradients()
 
-
-class Sequential(Model):
-    def __init__(self, layers=None, name="sequential"):
-        super().__init__(name=name, layers=layers)
-
     def add(self, layer):
         if len(self._layers) == 0:
             if isinstance(layer, InputLayer):
@@ -179,3 +193,7 @@ class Sequential(Model):
         for layer in self._layers:
             outputs = inputs = layer.forward(inputs, retain_derived=retain_derived)
         return outputs
+
+class Sequential(Model):
+    def __init__(self, layers=None, name="sequential"):
+        super().__init__(name=name, layers=layers)
