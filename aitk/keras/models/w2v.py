@@ -5,8 +5,8 @@ import numpy as np
 from ..layers import Embedding
 from ..losses import NCELoss
 
-from ...preprocessing.nlp import Vocabulary, tokenize_words
-from ...utils.data_structures import DiscreteSampler
+from ..preprocessing.nlp import Vocabulary, tokenize_words
+from ..numpy_ml_utils.data_structures import DiscreteSampler
 
 
 class Word2Vec(object):
