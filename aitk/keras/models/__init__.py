@@ -1,4 +1,6 @@
-from ..layers import InputLayer, Activation
+from aitk.keras.layers import InputLayer, Activation
+from aitk.keras.losses import MeanSquaredError, CrossEntropy
+from aitk.keras.initializers import OptimizerInitializer
 
 import numpy as np
 import numbers
@@ -9,6 +11,8 @@ class Model():
     def __init__(self, name=None, layers=None):
         self.name = name
         self._layers = layers if layers is not None else []
+        self.train = True
+        self.step = 0
 
     def compile(self):
         pass
@@ -57,11 +61,59 @@ class Model():
                 layer.set_weights([weights[i], weights[i+1]])
                 i += 2
 
+    def fit(self, inputs, targets, batch_size=None, epochs=1):
+        inputs = np.array(inputs, dtype=float)
+        targets = np.array(targets, dtype=float)
+        self.flush_gradients()
+        for epoch in range(epochs):
+            for batch_data in self.enumerate_batches(inputs, targets, batch_size):
+                self.train_batch(batch_data)
+                self.step += 1
+
+    def flush_gradients(self):
+        for layer in self.layers:
+            layer.flush_gradients()
+
+    def enumerate_batches(self, inputs, targets, batch_size):
+        # FIXME: break into batches
+        yield (inputs, targets)
+
+    def train_batch(self, dataset):
+        inputs, targets = dataset
+        outputs = self.predict(inputs, True)
+
+        loss = MeanSquaredError()
+        #loss = CrossEntropy()
+        dY_pred = loss.grad(
+            targets,
+            outputs,
+        )
+
+        for layer in reversed(self.layers):
+            dY_pred = layer.backward(dY_pred)
+
+        batch_loss = loss(targets, outputs)
+        # Update every batch:
+        self.update(batch_loss)
+
+    def update(self, batch_loss):
+        for layer in reversed(self.layers):
+            layer.update(batch_loss)
+        self.flush_gradients()
+
+
 class Sequential(Model):
-    def __init__(self, layers=None, name=None):
+    def __init__(self, layers=None, name=None, optimizer=None,
+                 weight_initializer=None):
         super().__init__(name=name, layers=layers)
+        self.optimizer = optimizer
+        self.weight_initializer = weight_initializer
 
     def add(self, layer):
+        # Fixme: how to do this better:
+        layer.optimizer = OptimizerInitializer(self.optimizer)()
+        layer.init = self.weight_initializer
+
         if len(self._layers) == 0:
             if isinstance(layer, InputLayer):
                 self._layers.append(layer)
@@ -77,9 +129,8 @@ class Sequential(Model):
             layer.add_input_layer(self._layers[-1])
             self._layers.append(layer)
 
-    def predict(self, inputs):
-        # FIXME: what type should inputs be?
+    def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
         for layer in self._layers:
-            outputs = inputs = layer.forward(inputs)
+            outputs = inputs = layer.forward(inputs, retain_derived=retain_derived)
         return outputs

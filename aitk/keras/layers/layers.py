@@ -24,7 +24,7 @@ from ..utils import (
 )
 
 class LayerBase(ABC):
-    def __init__(self, name=None, optimizer=None):
+    def __init__(self, optimizer=None, name=None):
         """An abstract base class inherited by all neural network layers"""
         self.X = []
         self.act_fn = None
@@ -203,7 +203,7 @@ class DotProductAttention(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.scale = scale
@@ -398,7 +398,7 @@ class RBM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.K = K  # CD-K
         self.init = init
@@ -653,7 +653,7 @@ class Add(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -749,7 +749,7 @@ class Multiply(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -846,7 +846,7 @@ class Flatten(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.keep_dim = keep_dim
         self._init_params()
@@ -980,7 +980,7 @@ class BatchNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.in_ch = None
         self.out_ch = None
@@ -1216,7 +1216,7 @@ class BatchNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.n_in = None
         self.n_out = None
@@ -1409,7 +1409,7 @@ class LayerNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.in_ch = None
         self.out_ch = None
@@ -1586,7 +1586,7 @@ class LayerNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.n_in = None
         self.n_out = None
@@ -1755,7 +1755,7 @@ class Embedding(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
         fstr = "'pool' must be either 'sum', 'mean', or None but got '{}'"
         assert pool in ["sum", "mean", None], fstr.format(pool)
 
@@ -1911,7 +1911,7 @@ class Embedding(LayerBase):
 
 
 class Dense(LayerBase):
-    def __init__(self, n_out, activation=None, init="glorot_uniform", optimizer=None):
+    def __init__(self, n_out, activation=None, init="glorot_uniform", optimizer=None, name=None):
         r"""
         A fully-connected (dense) layer.
 
@@ -1941,7 +1941,7 @@ class Dense(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(name=name, optimizer=optimizer)
 
         self.init = init
         self.n_in = None
@@ -2065,7 +2065,7 @@ class Dense(LayerBase):
 
         dX = dZ @ W.T
         dW = X.T @ dZ
-        dB = dZ.sum(axis=0, keepdims=True)
+        dB = dZ.sum(axis=0) # don't keep dimensions
         return dX, dW, dB
 
     def _bwd2(self, dLdy, X, dLdy_bwd):
@@ -2114,7 +2114,7 @@ class Softmax(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused for this layer.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.dim = dim
         self.n_in = None
@@ -2274,7 +2274,7 @@ class SparseEvolution(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.n_in = None
@@ -2524,7 +2524,7 @@ class Conv1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.pad = pad
         self.init = init
@@ -2805,7 +2805,7 @@ class Conv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.pad = pad
         self.init = init
@@ -3051,7 +3051,7 @@ class Pool2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.pad = pad
         self.mode = mode
@@ -3246,7 +3246,7 @@ class Deconv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.pad = pad
         self.init = init
@@ -3470,7 +3470,7 @@ class RNNCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.n_in = None
@@ -3695,7 +3695,7 @@ class LSTMCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.n_in = None
@@ -3972,7 +3972,7 @@ class RNN(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.n_in = None
@@ -4151,7 +4151,7 @@ class LSTM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer)
+        super().__init__(optimizer=optimizer)
 
         self.init = init
         self.n_in = None

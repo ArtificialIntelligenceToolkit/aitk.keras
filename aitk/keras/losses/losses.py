@@ -23,6 +23,18 @@ class ObjectiveBase(ABC):
         pass
 
 
+class MeanSquaredError(ObjectiveBase):
+    def loss(self, y, y_pred):
+        squared_error = np.square(y_pred - y)
+        mse = np.mean(squared_error)
+        return mse
+
+    def __call__(self, y, y_pred):
+        return self.loss(y, y_pred)
+
+    def grad(self, y, y_pred):
+        return 2 * (y_pred - y)
+
 class SquaredError(ObjectiveBase):
     def __init__(self):
         """

@@ -2,6 +2,12 @@
 import numbers
 import numpy as np
 
+MSG_CACHE = set()
+
+def warn_once(msg):
+    if msg not in MSG_CACHE:
+        print(msg)
+        MSG_CACHE.add(msg)
 
 #######################################################################
 #                             Assertions                              #
@@ -31,7 +37,8 @@ def is_stochastic(X):
     """True if `X` contains probabilities that sum to 1 along the columns"""
     msg = "Array should be stochastic along the columns"
     assert len(X[X < 0]) == len(X[X > 1]) == 0, msg
-    assert np.allclose(np.sum(X, axis=1), np.ones(X.shape[0])), msg
+    if not np.allclose(np.sum(X, axis=1), np.ones(X.shape[0])):
+        warn_once("WARNING: %s; are you using the correct activation function?" % msg)
     return True
 
 
