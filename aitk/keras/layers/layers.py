@@ -24,13 +24,14 @@ from ..utils import (
 )
 
 class LayerBase(ABC):
-    def __init__(self, optimizer=None, name=None):
+    def __init__(self, name=None):
         """An abstract base class inherited by all neural network layers"""
         self.X = []
         self.act_fn = None
         self.trainable = True
         self.name = name
-        self.optimizer = OptimizerInitializer(optimizer)()
+        self.optimizer = None
+        self.default_weight_optimizer = "glorot_uniform"
 
         self.gradients = {}
         self.parameters = {}
@@ -38,6 +39,10 @@ class LayerBase(ABC):
         self.input_layers = []
 
         super().__init__()
+
+    def set_optimizer(self, optimizer=None):
+        optimizer = optimizer or self.default_optimizer
+        self.optimizer = OptimizerInitializer(optimizer)()
 
     @abstractmethod
     def _init_params(self, **kwargs):
@@ -170,7 +175,7 @@ class InputLayer(LayerBase):
         raise NotImplementedError
 
 class DotProductAttention(LayerBase):
-    def __init__(self, scale=True, dropout_p=0, init="glorot_uniform", optimizer=None):
+    def __init__(self, scale=True, dropout_p=0, weight_initializer="glorot_uniform"):
         r"""
         A single "attention head" layer using a dot-product for the scoring function.
 
@@ -203,9 +208,9 @@ class DotProductAttention(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = init
         self.scale = scale
         self.dropout_p = dropout_p
         self._init_params()
@@ -223,7 +228,7 @@ class DotProductAttention(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "DotProductAttention",
-            "init": self.init,
+            "init": self.weight_initializer,
             "scale": self.scale,
             "dropout_p": self.dropout_p,
             "optimizer": {
@@ -379,7 +384,7 @@ class DotProductAttention(LayerBase):
 
 
 class RBM(LayerBase):
-    def __init__(self, n_out, K=1, init="glorot_uniform", optimizer=None):
+    def __init__(self, n_out, K=1, weight_initializer="glorot_uniform"):
         """
         A Restricted Boltzmann machine with Bernoulli visible and hidden units.
 
@@ -398,10 +403,10 @@ class RBM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.K = K  # CD-K
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.is_initialized = False
@@ -416,7 +421,7 @@ class RBM(LayerBase):
         if not self.weights_set:
             b_in = np.zeros((1, self.n_in))
             b_out = np.zeros((1, self.n_out))
-            init_weights = WeightInitializer(str(self.act_fn_V), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn_V), mode=self.weight_initializer)
             W = init_weights((self.n_in, self.n_out))
         else:
             W, b_in, b_out = self.get_weights()
@@ -447,7 +452,7 @@ class RBM(LayerBase):
             "K": self.K,
             "n_in": self.n_in,
             "n_out": self.n_out,
-            "init": self.init,
+            "init": self.weight_initializer,
             "optimizer": {
                 "cache": self.optimizer.cache,
                 "hyperparameters": self.optimizer.hyperparameterse,
@@ -636,7 +641,7 @@ class RBM(LayerBase):
 
 
 class Add(LayerBase):
-    def __init__(self, act_fn=None, optimizer=None):
+    def __init__(self, act_fn=None):
         """
         An "addition" layer that returns the sum of its inputs, passed through
         an optional nonlinearity.
@@ -653,7 +658,7 @@ class Add(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -732,7 +737,7 @@ class Add(LayerBase):
 
 
 class Multiply(LayerBase):
-    def __init__(self, act_fn=None, optimizer=None):
+    def __init__(self, act_fn=None):
         """
         A multiplication layer that returns the *elementwise* product of its
         inputs, passed through an optional nonlinearity.
@@ -749,7 +754,7 @@ class Multiply(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -830,7 +835,7 @@ class Multiply(LayerBase):
 
 
 class Flatten(LayerBase):
-    def __init__(self, keep_dim="first", optimizer=None):
+    def __init__(self, keep_dim="first"):
         """
         Flatten a multidimensional input into a 2D matrix.
 
@@ -846,7 +851,7 @@ class Flatten(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.keep_dim = keep_dim
         self._init_params()
@@ -927,7 +932,7 @@ class Flatten(LayerBase):
 
 
 class BatchNorm2D(LayerBase):
-    def __init__(self, momentum=0.9, epsilon=1e-5, optimizer=None):
+    def __init__(self, momentum=0.9, epsilon=1e-5):
         """
         A batch normalization layer for two-dimensional inputs with an
         additional channel dimension.
@@ -980,7 +985,7 @@ class BatchNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.in_ch = None
         self.out_ch = None
@@ -1164,7 +1169,7 @@ class BatchNorm2D(LayerBase):
 
 
 class BatchNorm1D(LayerBase):
-    def __init__(self, momentum=0.9, epsilon=1e-5, optimizer=None):
+    def __init__(self, momentum=0.9, epsilon=1e-5):
         """
         A batch normalization layer for 1D inputs.
 
@@ -1216,7 +1221,7 @@ class BatchNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.n_in = None
         self.n_out = None
@@ -1378,7 +1383,7 @@ class BatchNorm1D(LayerBase):
 
 
 class LayerNorm2D(LayerBase):
-    def __init__(self, epsilon=1e-5, optimizer=None):
+    def __init__(self, epsilon=1e-5):
         """
         A layer normalization layer for 2D inputs with an additional channel
         dimension.
@@ -1409,7 +1414,7 @@ class LayerNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.in_ch = None
         self.out_ch = None
@@ -1556,7 +1561,7 @@ class LayerNorm2D(LayerBase):
 
 
 class LayerNorm1D(LayerBase):
-    def __init__(self, epsilon=1e-5, optimizer=None):
+    def __init__(self, epsilon=1e-5):
         """
         A layer normalization layer for 1D inputs.
 
@@ -1586,7 +1591,7 @@ class LayerNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.n_in = None
         self.n_out = None
@@ -1722,7 +1727,7 @@ class LayerNorm1D(LayerBase):
 
 class Embedding(LayerBase):
     def __init__(
-        self, n_out, vocab_size, pool=None, init="glorot_uniform", optimizer=None,
+        self, n_out, vocab_size, pool=None, weight_initializer="glorot_uniform",
     ):
         """
         An embedding layer.
@@ -1755,11 +1760,11 @@ class Embedding(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
         fstr = "'pool' must be either 'sum', 'mean', or None but got '{}'"
         assert pool in ["sum", "mean", None], fstr.format(pool)
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.pool = pool
         self.n_out = n_out
         self.vocab_size = vocab_size
@@ -1770,7 +1775,7 @@ class Embedding(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer("Affine(slope=1, intercept=0)", mode=self.init)
+            init_weights = WeightInitializer("Affine(slope=1, intercept=0)", mode=self.weight_initializer)
             W = init_weights((self.vocab_size, self.n_out))
         else:
             W = self.get_weights()
@@ -1786,7 +1791,7 @@ class Embedding(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Embedding",
-            "init": self.init,
+            "init": self.weight_initializer,
             "pool": self.pool,
             "n_out": self.n_out,
             "vocab_size": self.vocab_size,
@@ -1911,7 +1916,7 @@ class Embedding(LayerBase):
 
 
 class Dense(LayerBase):
-    def __init__(self, n_out, activation=None, init="glorot_uniform", optimizer=None, name=None):
+    def __init__(self, n_out, activation=None, weight_initializer="glorot_uniform", name=None):
         r"""
         A fully-connected (dense) layer.
 
@@ -1941,9 +1946,9 @@ class Dense(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(name=name, optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.act_fn = ActivationInitializer(activation)()
@@ -1953,7 +1958,7 @@ class Dense(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             W = init_weights((self.n_in, self.n_out))
             b = np.zeros((1, self.n_out))
         else:
@@ -1970,7 +1975,7 @@ class Dense(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Dense",
-            "init": self.init,
+            "init": self.weight_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -2083,7 +2088,7 @@ class Dense(LayerBase):
 
 
 class Softmax(LayerBase):
-    def __init__(self, dim=-1, optimizer=None):
+    def __init__(self, dim=-1):
         r"""
         A softmax nonlinearity layer.
 
@@ -2114,7 +2119,7 @@ class Softmax(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused for this layer.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.dim = dim
         self.n_in = None
@@ -2237,8 +2242,7 @@ class SparseEvolution(LayerBase):
         zeta=0.3,
         epsilon=20,
         act_fn=None,
-        init="glorot_uniform",
-        optimizer=None,
+        weight_initializer="glorot_uniform",
     ):
         r"""
         A sparse Erdos-Renyi layer with evolutionary rewiring via the sparse
@@ -2274,9 +2278,9 @@ class SparseEvolution(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.zeta = zeta
         self.n_out = n_out
@@ -2288,7 +2292,7 @@ class SparseEvolution(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             W = init_weights((self.n_in, self.n_out))
             b = np.zeros((1, self.n_out))
             # convert a fully connected base layer into a sparse layer
@@ -2309,7 +2313,7 @@ class SparseEvolution(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "SparseEvolutionary",
-            "init": self.init,
+            "init": self.weight_initializer,
             "zeta": self.zeta,
             "n_in": self.n_in,
             "n_out": self.n_out,
@@ -2479,8 +2483,7 @@ class Conv1D(LayerBase):
         stride=1,
         dilation=0,
         act_fn=None,
-        init="glorot_uniform",
-        optimizer=None,
+        weight_initializer="glorot_uniform",
     ):
         """
         Apply a one-dimensional convolution kernel over an input volume.
@@ -2524,10 +2527,10 @@ class Conv1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.pad = pad
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.in_ch = None
         self.out_ch = out_ch
         self.stride = stride
@@ -2540,7 +2543,7 @@ class Conv1D(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             W = init_weights((self.kernel_width, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, self.out_ch))
         else:
@@ -2558,7 +2561,7 @@ class Conv1D(LayerBase):
         return {
             "layer": "Conv1D",
             "pad": self.pad,
-            "init": self.init,
+            "init": self.weight_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -2761,8 +2764,7 @@ class Conv2D(LayerBase):
         stride=1,
         dilation=0,
         act_fn=None,
-        optimizer=None,
-        init="glorot_uniform",
+        weight_initializer="glorot_uniform",
     ):
         """
         Apply a two-dimensional convolution kernel over an input volume.
@@ -2805,10 +2807,10 @@ class Conv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.pad = pad
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.in_ch = None
         self.out_ch = out_ch
         self.stride = stride
@@ -2822,7 +2824,7 @@ class Conv2D(LayerBase):
     def _init_params(self):
         fr, fc = self.kernel_shape
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             W = init_weights((fr, fc, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, 1, self.out_ch))
         else:
@@ -2840,7 +2842,7 @@ class Conv2D(LayerBase):
         return {
             "layer": "Conv2D",
             "pad": self.pad,
-            "init": self.init,
+            "init": self.weight_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3030,7 +3032,7 @@ class Conv2D(LayerBase):
 
 
 class Pool2D(LayerBase):
-    def __init__(self, kernel_shape, stride=1, pad=0, mode="max", optimizer=None):
+    def __init__(self, kernel_shape, stride=1, pad=0, mode="max"):
         """
         A single two-dimensional pooling layer.
 
@@ -3051,7 +3053,7 @@ class Pool2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.pad = pad
         self.mode = mode
@@ -3211,8 +3213,7 @@ class Deconv2D(LayerBase):
         pad=0,
         stride=1,
         act_fn=None,
-        optimizer=None,
-        init="glorot_uniform",
+        weight_initializer="glorot_uniform",
     ):
         """
         Apply a two-dimensional "deconvolution" to an input volume.
@@ -3246,10 +3247,10 @@ class Deconv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
         self.pad = pad
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.in_ch = None
         self.stride = stride
         self.out_ch = out_ch
@@ -3262,7 +3263,7 @@ class Deconv2D(LayerBase):
     def _init_params(self):
         fr, fc = self.kernel_shape
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             W = init_weights((fr, fc, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, 1, self.out_ch))
         else:
@@ -3280,7 +3281,7 @@ class Deconv2D(LayerBase):
         return {
             "layer": "Deconv2D",
             "pad": self.pad,
-            "init": self.init,
+            "init": self.weight_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3431,7 +3432,7 @@ class Deconv2D(LayerBase):
 
 
 class RNNCell(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", init="glorot_uniform", optimizer=None):
+    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform"):
         r"""
         A single step of a vanilla (Elman) RNN.
 
@@ -3470,9 +3471,9 @@ class RNNCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -3484,7 +3485,7 @@ class RNNCell(LayerBase):
     def _init_params(self):
         self.X = []
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
             Wax = init_weights((self.n_in, self.n_out))
             Waa = init_weights((self.n_out, self.n_out))
             ba = np.zeros((self.n_out, 1))
@@ -3517,7 +3518,7 @@ class RNNCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNNCell",
-            "init": self.init,
+            "init": self.weight_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3646,8 +3647,7 @@ class LSTMCell(LayerBase):
         n_out,
         act_fn="Tanh",
         gate_fn="Sigmoid",
-        init="glorot_uniform",
-        optimizer=None,
+        weight_initializer="glorot_uniform",
     ):
         """
         A single step of a long short-term memory (LSTM) RNN.
@@ -3695,9 +3695,9 @@ class LSTMCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -3719,8 +3719,8 @@ class LSTMCell(LayerBase):
     def _init_params(self):
         self.X = []
         if not self.weights_set:
-            init_weights_gate = WeightInitializer(str(self.gate_fn), mode=self.init)
-            init_weights_act = WeightInitializer(str(self.act_fn), mode=self.init)
+            init_weights_gate = WeightInitializer(str(self.gate_fn), mode=self.weight_initializer)
+            init_weights_act = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
 
             Wf = init_weights_gate((self.n_in + self.n_out, self.n_out))
             Wu = init_weights_gate((self.n_in + self.n_out, self.n_out))
@@ -3789,7 +3789,7 @@ class LSTMCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTMCell",
-            "init": self.init,
+            "init": self.weight_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3952,7 +3952,7 @@ class LSTMCell(LayerBase):
 
 
 class RNN(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", init="glorot_uniform", optimizer=None):
+    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform"):
         """
         A single vanilla (Elman)-RNN layer.
 
@@ -3972,9 +3972,9 @@ class RNN(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -3987,9 +3987,9 @@ class RNN(LayerBase):
             n_in=self.n_in,
             n_out=self.n_out,
             act_fn=self.act_fn,
-            init=self.init,
-            optimizer=self.optimizer,
+            weight_initializer=self.weight_initializer,
         )
+        self.cell.set_optimizer() # FIXME
         self.is_initialized = True
         self.weights_set = True
 
@@ -3998,7 +3998,7 @@ class RNN(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNN",
-            "init": self.init,
+            "init": self.weight_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -4128,8 +4128,7 @@ class LSTM(LayerBase):
         n_out,
         act_fn="Tanh",
         gate_fn="Sigmoid",
-        init="glorot_uniform",
-        optimizer=None,
+        weight_initializer="glorot_uniform",
     ):
         """
         A single long short-term memory (LSTM) RNN layer.
@@ -4151,9 +4150,9 @@ class LSTM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__(optimizer=optimizer)
+        super().__init__()
 
-        self.init = init
+        self.weight_initializer = weight_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -4168,8 +4167,9 @@ class LSTM(LayerBase):
             n_out=self.n_out,
             act_fn=self.act_fn,
             gate_fn=self.gate_fn,
-            init=self.init,
+            weight_initializer=self.weight_initializer,
         )
+        ## FIXME: does LSTMCell need optimizer?
         self.is_initialized = True
         self.weights_set = True
 
@@ -4178,7 +4178,7 @@ class LSTM(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTM",
-            "init": self.init,
+            "init": self.weight_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),

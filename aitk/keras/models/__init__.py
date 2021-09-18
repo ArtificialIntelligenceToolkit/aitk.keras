@@ -7,6 +7,11 @@ import numbers
 import functools
 import operator
 
+LOSS_FUNCTIONS = {
+    "mse": MeanSquaredError,
+    "crossentropy": CrossEntropy,
+}
+
 class Model():
     def __init__(self, name=None, layers=None):
         self.name = name
@@ -14,8 +19,11 @@ class Model():
         self.train = True
         self.step = 0
 
-    def compile(self):
-        pass
+    def compile(self, optimizer, loss):
+        for layer in self.layers:
+            layer.optimizer = OptimizerInitializer(optimizer)()
+        loss_function = LOSS_FUNCTIONS[loss]
+        self.loss_function = loss_function()
 
     @property
     def layers(self):
@@ -82,9 +90,7 @@ class Model():
         inputs, targets = dataset
         outputs = self.predict(inputs, True)
 
-        loss = MeanSquaredError()
-        #loss = CrossEntropy()
-        dY_pred = loss.grad(
+        dY_pred = self.loss_function.grad(
             targets,
             outputs,
         )
@@ -92,7 +98,7 @@ class Model():
         for layer in reversed(self.layers):
             dY_pred = layer.backward(dY_pred)
 
-        batch_loss = loss(targets, outputs)
+        batch_loss = self.loss_function(targets, outputs)
         # Update every batch:
         self.update(batch_loss)
 
@@ -104,16 +110,12 @@ class Model():
 
 class Sequential(Model):
     def __init__(self, layers=None, name=None, optimizer=None,
-                 weight_initializer=None):
+                 weight_initializer="glorot_uniform"):
         super().__init__(name=name, layers=layers)
         self.optimizer = optimizer
         self.weight_initializer = weight_initializer
 
     def add(self, layer):
-        # Fixme: how to do this better:
-        layer.optimizer = OptimizerInitializer(self.optimizer)()
-        layer.init = self.weight_initializer
-
         if len(self._layers) == 0:
             if isinstance(layer, InputLayer):
                 self._layers.append(layer)
