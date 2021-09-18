@@ -93,7 +93,6 @@ class Model():
                     current += total
                 layer.set_weights(new_weights)
         else:
-            # FIXME: assumes weights, biases... now they exist, so just use sizes
             i = 0
             for layer in self.layers:
                 orig = layer.get_weights()
@@ -101,7 +100,7 @@ class Model():
                 layer.set_weights(weights[i:i+count])
                 i += count
 
-    def fit(self, inputs, targets, batch_size=None, epochs=1):
+    def fit(self, inputs, targets, batch_size=32, epochs=1):
         inputs = np.array(inputs, dtype=float)
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
@@ -117,13 +116,23 @@ class Model():
             layer.flush_gradients()
 
     def enumerate_batches(self, inputs, targets, batch_size):
-        # FIXME: break into batches
-        yield (inputs, targets)
+        current_row = 0
+        while current_row < len(inputs):
+            # if one input bank, one output bank:
+            batch_inputs = inputs[current_row:current_row + batch_size]
+            batch_targets = targets[current_row:current_row + batch_size]
+            # FIXME: either may be composed of banks
+            current_row += len(batch_inputs)
+            yield (batch_inputs, batch_targets)
 
     def train_batch(self, dataset):
         inputs, targets = dataset
+        # Use predict to forward the activations, saving
+        # needed information:
         outputs = self.predict(inputs, True)
 
+        # Compute the derivative with respect
+        # to this batch of the dataset:
         dY_pred = self.loss_function.grad(
             targets,
             outputs,
@@ -133,7 +142,9 @@ class Model():
             dY_pred = layer.backward(dY_pred)
 
         batch_loss = self.loss_function(targets, outputs)
-        # Update every batch:
+        # FIXME: compute other metrics, and log them
+        # Update every layer:
+        # FIXME: scale this proportional?
         self.update(batch_loss)
         return batch_loss
 

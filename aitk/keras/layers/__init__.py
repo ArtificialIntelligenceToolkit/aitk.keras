@@ -190,7 +190,7 @@ class InputLayer(LayerBase):
         raise NotImplementedError
 
 class DotProductAttention(LayerBase):
-    def __init__(self, scale=True, dropout_p=0, weight_initializer="glorot_uniform", name=None):
+    def __init__(self, scale=True, dropout_p=0, kernel_initializer="glorot_uniform", name=None):
         r"""
         A single "attention head" layer using a dot-product for the scoring function.
 
@@ -225,7 +225,7 @@ class DotProductAttention(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = init
+        self.kernel_initializer = init
         self.scale = scale
         self.dropout_p = dropout_p
         self._init_params()
@@ -243,7 +243,7 @@ class DotProductAttention(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "DotProductAttention",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "scale": self.scale,
             "dropout_p": self.dropout_p,
             "optimizer": {
@@ -399,7 +399,7 @@ class DotProductAttention(LayerBase):
 
 
 class RBM(LayerBase):
-    def __init__(self, n_out, K=1, weight_initializer="glorot_uniform", name=None):
+    def __init__(self, n_out, K=1, kernel_initializer="glorot_uniform", name=None):
         """
         A Restricted Boltzmann machine with Bernoulli visible and hidden units.
 
@@ -421,7 +421,7 @@ class RBM(LayerBase):
         super().__init__(name=name)
 
         self.K = K  # CD-K
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.is_initialized = False
@@ -436,7 +436,7 @@ class RBM(LayerBase):
         if not self.weights_set:
             b_in = np.zeros((1, self.n_in))
             b_out = np.zeros((1, self.n_out))
-            init_weights = WeightInitializer(str(self.act_fn_V), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn_V), mode=self.kernel_initializer)
             W = init_weights((self.n_in, self.n_out))
         else:
             W, b_in, b_out = self.get_weights()
@@ -467,7 +467,7 @@ class RBM(LayerBase):
             "K": self.K,
             "n_in": self.n_in,
             "n_out": self.n_out,
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "optimizer": {
                 "cache": self.optimizer.cache,
                 "hyperparameters": self.optimizer.hyperparameterse,
@@ -1742,7 +1742,7 @@ class LayerNorm1D(LayerBase):
 
 class Embedding(LayerBase):
     def __init__(
-        self, n_out, vocab_size, pool=None, weight_initializer="glorot_uniform", name=None
+        self, n_out, vocab_size, pool=None, kernel_initializer="glorot_uniform", name=None
     ):
         """
         An embedding layer.
@@ -1779,7 +1779,7 @@ class Embedding(LayerBase):
         fstr = "'pool' must be either 'sum', 'mean', or None but got '{}'"
         assert pool in ["sum", "mean", None], fstr.format(pool)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.pool = pool
         self.n_out = n_out
         self.vocab_size = vocab_size
@@ -1790,7 +1790,7 @@ class Embedding(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer("Affine(slope=1, intercept=0)", mode=self.weight_initializer)
+            init_weights = WeightInitializer("Affine(slope=1, intercept=0)", mode=self.kernel_initializer)
             W = init_weights((self.vocab_size, self.n_out))
         else:
             W = self.get_weights()
@@ -1806,7 +1806,7 @@ class Embedding(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Embedding",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "pool": self.pool,
             "n_out": self.n_out,
             "vocab_size": self.vocab_size,
@@ -1931,7 +1931,7 @@ class Embedding(LayerBase):
 
 
 class Dense(LayerBase):
-    def __init__(self, n_out, activation=None, weight_initializer="glorot_uniform", name=None):
+    def __init__(self, n_out, activation=None, kernel_initializer="glorot_uniform", name=None):
         r"""
         A fully-connected (dense) layer.
 
@@ -1963,7 +1963,7 @@ class Dense(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.act_fn = ActivationInitializer(activation)()
@@ -1973,7 +1973,7 @@ class Dense(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             W = init_weights((self.n_in, self.n_out))
             b = np.zeros((1, self.n_out))
         else:
@@ -1990,7 +1990,7 @@ class Dense(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Dense",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -2257,7 +2257,7 @@ class SparseEvolution(LayerBase):
         zeta=0.3,
         epsilon=20,
         act_fn=None,
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         r"""
@@ -2296,7 +2296,7 @@ class SparseEvolution(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.zeta = zeta
         self.n_out = n_out
@@ -2308,7 +2308,7 @@ class SparseEvolution(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             W = init_weights((self.n_in, self.n_out))
             b = np.zeros((1, self.n_out))
             # convert a fully connected base layer into a sparse layer
@@ -2329,7 +2329,7 @@ class SparseEvolution(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "SparseEvolutionary",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "zeta": self.zeta,
             "n_in": self.n_in,
             "n_out": self.n_out,
@@ -2499,7 +2499,7 @@ class Conv1D(LayerBase):
         stride=1,
         dilation=0,
         act_fn=None,
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         """
@@ -2547,7 +2547,7 @@ class Conv1D(LayerBase):
         super().__init__(name=name)
 
         self.pad = pad
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.in_ch = None
         self.out_ch = out_ch
         self.stride = stride
@@ -2560,7 +2560,7 @@ class Conv1D(LayerBase):
 
     def _init_params(self):
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             W = init_weights((self.kernel_width, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, self.out_ch))
         else:
@@ -2578,7 +2578,7 @@ class Conv1D(LayerBase):
         return {
             "layer": "Conv1D",
             "pad": self.pad,
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -2781,7 +2781,7 @@ class Conv2D(LayerBase):
         stride=1,
         dilation=0,
         act_fn=None,
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         """
@@ -2828,7 +2828,7 @@ class Conv2D(LayerBase):
         super().__init__(name=name)
 
         self.pad = pad
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.in_ch = None
         self.out_ch = out_ch
         self.stride = stride
@@ -2842,7 +2842,7 @@ class Conv2D(LayerBase):
     def _init_params(self):
         fr, fc = self.kernel_shape
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             W = init_weights((fr, fc, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, 1, self.out_ch))
         else:
@@ -2860,7 +2860,7 @@ class Conv2D(LayerBase):
         return {
             "layer": "Conv2D",
             "pad": self.pad,
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3231,7 +3231,7 @@ class Deconv2D(LayerBase):
         pad=0,
         stride=1,
         act_fn=None,
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         """
@@ -3269,7 +3269,7 @@ class Deconv2D(LayerBase):
         super().__init__(name=name)
 
         self.pad = pad
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.in_ch = None
         self.stride = stride
         self.out_ch = out_ch
@@ -3282,7 +3282,7 @@ class Deconv2D(LayerBase):
     def _init_params(self):
         fr, fc = self.kernel_shape
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             W = init_weights((fr, fc, self.in_ch, self.out_ch))
             b = np.zeros((1, 1, 1, self.out_ch))
         else:
@@ -3300,7 +3300,7 @@ class Deconv2D(LayerBase):
         return {
             "layer": "Deconv2D",
             "pad": self.pad,
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3451,7 +3451,7 @@ class Deconv2D(LayerBase):
 
 
 class RNNCell(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform", name=None):
+    def __init__(self, n_out, act_fn="Tanh", kernel_initializer="glorot_uniform", name=None):
         r"""
         A single step of a vanilla (Elman) RNN.
 
@@ -3492,7 +3492,7 @@ class RNNCell(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -3504,7 +3504,7 @@ class RNNCell(LayerBase):
     def _init_params(self):
         self.X = []
         if not self.weights_set:
-            init_weights = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
             Wax = init_weights((self.n_in, self.n_out))
             Waa = init_weights((self.n_out, self.n_out))
             ba = np.zeros((self.n_out, 1))
@@ -3537,7 +3537,7 @@ class RNNCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNNCell",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3666,7 +3666,7 @@ class LSTMCell(LayerBase):
         n_out,
         act_fn="Tanh",
         gate_fn="Sigmoid",
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         """
@@ -3717,7 +3717,7 @@ class LSTMCell(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -3739,8 +3739,8 @@ class LSTMCell(LayerBase):
     def _init_params(self):
         self.X = []
         if not self.weights_set:
-            init_weights_gate = WeightInitializer(str(self.gate_fn), mode=self.weight_initializer)
-            init_weights_act = WeightInitializer(str(self.act_fn), mode=self.weight_initializer)
+            init_weights_gate = WeightInitializer(str(self.gate_fn), mode=self.kernel_initializer)
+            init_weights_act = WeightInitializer(str(self.act_fn), mode=self.kernel_initializer)
 
             Wf = init_weights_gate((self.n_in + self.n_out, self.n_out))
             Wu = init_weights_gate((self.n_in + self.n_out, self.n_out))
@@ -3809,7 +3809,7 @@ class LSTMCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTMCell",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3972,7 +3972,7 @@ class LSTMCell(LayerBase):
 
 
 class RNN(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform", name=None):
+    def __init__(self, n_out, act_fn="Tanh", kernel_initializer="glorot_uniform", name=None):
         """
         A single vanilla (Elman)-RNN layer.
 
@@ -3994,7 +3994,7 @@ class RNN(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -4007,7 +4007,7 @@ class RNN(LayerBase):
             n_in=self.n_in,
             n_out=self.n_out,
             act_fn=self.act_fn,
-            weight_initializer=self.weight_initializer,
+            kernel_initializer=self.kernel_initializer,
         )
         self.cell.set_optimizer() # FIXME
         self.is_initialized = True
@@ -4018,7 +4018,7 @@ class RNN(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNN",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -4148,7 +4148,7 @@ class LSTM(LayerBase):
         n_out,
         act_fn="Tanh",
         gate_fn="Sigmoid",
-        weight_initializer="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         name=None,
     ):
         """
@@ -4173,7 +4173,7 @@ class LSTM(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.weight_initializer = weight_initializer
+        self.kernel_initializer = kernel_initializer
         self.n_in = None
         self.n_out = n_out
         self.n_timesteps = None
@@ -4188,7 +4188,7 @@ class LSTM(LayerBase):
             n_out=self.n_out,
             act_fn=self.act_fn,
             gate_fn=self.gate_fn,
-            weight_initializer=self.weight_initializer,
+            kernel_initializer=self.kernel_initializer,
         )
         ## FIXME: does LSTMCell need optimizer?
         self.is_initialized = True
@@ -4199,7 +4199,7 @@ class LSTM(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTM",
-            "init": self.weight_initializer,
+            "init": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
