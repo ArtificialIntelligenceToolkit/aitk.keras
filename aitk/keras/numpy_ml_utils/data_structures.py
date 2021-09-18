@@ -1,6 +1,6 @@
 import heapq
 from copy import copy
-from collections import Hashable
+from collections.abc import Hashable
 
 import numpy as np
 
@@ -246,7 +246,7 @@ class BallTree:
         ----------
         X : :py:class:`ndarray <numpy.ndarray>` of shape `(N, M)`
             An array of `N` examples each with `M` features.
-        y : :py:class:`ndarray <numpy.ndarray>` of shape `(N, \*)` or None
+        y : :py:class:`ndarray <numpy.ndarray>` of shape `(N, *)` or None
             An array of target values / labels associated with the entries in
             `X`. Default is None.
         """
