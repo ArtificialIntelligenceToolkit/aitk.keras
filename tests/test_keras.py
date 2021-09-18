@@ -5,21 +5,19 @@ def build_model_tf():
 
     model = Sequential()
     model.add(InputLayer(2, name="input"))
-    model.add(Dense(2, activation="relu", name="hidden1"))
-    model.add(Dense(1, activation="tanh", name="hidden2"))
-    model.add(Dense(2, activation="sigmoid", name="output"))
-    model.compile()
+    model.add(Dense(2, activation="relu", name="hidden"))
+    model.add(Dense(1, activation="sigmoid", name="output"))
+    model.compile(optimizer="adam", loss="mse")
     return model
 
 def build_model_aitk():
     from aitk.keras.layers import InputLayer, Dense, Activation
     from aitk.keras.models import Sequential
 
-    model = Sequential()
+    model = Sequential(optimizer="adam")
     model.add(InputLayer(2, name="input"))
-    model.add(Dense(2, activation="relu", name="hidden1"))
-    model.add(Dense(1, activation="tanh", name="hidden2"))
-    model.add(Dense(2, activation="sigmoid", name="output"))
+    model.add(Dense(2, activation="relu", name="hidden"))
+    model.add(Dense(1, activation="sigmoid", name="output"))
     model.compile()
     return model
 
@@ -36,3 +34,7 @@ w2 = model_aitk.get_weights()
 print("model_aitk weights", w2)
 
 print(model_aitk.predict([[1, 1]]))
+
+# XOR:
+inputs = [[0, 0], [0, 1], [1, 0], [1, 1]]
+targets = [[0], [1], [1], [0]]
