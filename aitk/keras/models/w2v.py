@@ -19,7 +19,7 @@ class Word2Vec(object):
         embedding_dim=300,
         filter_stopwords=True,
         noise_dist_power=0.75,
-        init="glorot_uniform",
+        kernel_initializer="glorot_uniform",
         num_negative_samples=64,
         optimizer="SGD(lr=0.1)",
     ):
@@ -60,7 +60,7 @@ class Word2Vec(object):
             uniform distribution over tokens, and a value of 1 corresponds to a
             distribution proportional to the token unigram counts. Default is
             0.75.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is 'glorot_uniform'.
         num_negative_samples: int
             The number of negative samples to draw from the noise distribution
@@ -110,7 +110,7 @@ class Word2Vec(object):
            International Conference on Neural Information Processing Systems.
            https://arxiv.org/pdf/1310.4546.pdf
         """
-        self.init = init
+        self.kernel_initializer = kernel_initializer
         self.optimizer = optimizer
         self.skip_gram = skip_gram
         self.min_count = min_count
@@ -127,7 +127,7 @@ class Word2Vec(object):
         self._build_noise_distribution()
 
         self.embeddings = Embedding(
-            init=self.init,
+            kernel_initializer=self.kernel_initializer,
             vocab_size=self.vocab_size,
             n_out=self.embedding_dim,
             optimizer=self.optimizer,
@@ -135,7 +135,7 @@ class Word2Vec(object):
         )
 
         self.loss = NCELoss(
-            init=self.init,
+            kernel_initializer=self.kernel_initializer,
             optimizer=self.optimizer,
             n_classes=self.vocab_size,
             subtract_log_label_prob=False,
@@ -159,7 +159,7 @@ class Word2Vec(object):
         """Model hyperparameters"""
         hp = {
             "layer": "Word2Vec",
-            "init": self.init,
+            "kernel_initializer": self.kernel_initializer,
             "skip_gram": self.skip_gram,
             "optimizer": self.optimizer,
             "max_tokens": self.max_tokens,

@@ -214,7 +214,7 @@ class DotProductAttention(LayerBase):
         dropout_p : float in [0, 1)
             The dropout propbability during training, applied to the output of
             the softmax. If 0, no dropout is applied. Default is 0.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
             Unused.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
@@ -225,7 +225,7 @@ class DotProductAttention(LayerBase):
         """  # noqa: E501
         super().__init__(name=name)
 
-        self.kernel_initializer = init
+        self.kernel_initializer = kernel_initializer
         self.scale = scale
         self.dropout_p = dropout_p
         self._init_params()
@@ -243,7 +243,7 @@ class DotProductAttention(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "DotProductAttention",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "scale": self.scale,
             "dropout_p": self.dropout_p,
             "optimizer": {
@@ -410,7 +410,7 @@ class RBM(LayerBase):
         K : int
             The number of contrastive divergence steps to run before computing
             a single gradient update. Default is 1.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -467,7 +467,7 @@ class RBM(LayerBase):
             "K": self.K,
             "n_in": self.n_in,
             "n_out": self.n_out,
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "optimizer": {
                 "cache": self.optimizer.cache,
                 "hyperparameters": self.optimizer.hyperparameterse,
@@ -1767,7 +1767,7 @@ class Embedding(LayerBase):
             If not None, apply this function to the collection of `n_in`
             encodings in each example to produce a single, pooled embedding.
             Default is None.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -1806,7 +1806,7 @@ class Embedding(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Embedding",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "pool": self.pool,
             "n_out": self.n_out,
             "vocab_size": self.vocab_size,
@@ -1953,7 +1953,7 @@ class Dense(LayerBase):
         act_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The element-wise output nonlinearity used in computing `Y`. If None,
             use the identity function :math:`f(X) = X`. Default is None.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -1990,7 +1990,7 @@ class Dense(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "Dense",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -2286,7 +2286,7 @@ class SparseEvolution(LayerBase):
         act_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The element-wise output nonlinearity used in computing `Y`. If None,
             use the identity function :math:`f(X) = X`. Default is None.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -2329,7 +2329,7 @@ class SparseEvolution(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "SparseEvolutionary",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "zeta": self.zeta,
             "n_in": self.n_in,
             "n_out": self.n_out,
@@ -2536,7 +2536,7 @@ class Conv1D(LayerBase):
             Number of pixels inserted between kernel elements. Effective kernel
             shape after dilation is: ``[kernel_rows * (d + 1) - d, kernel_cols
             * (d + 1) - d]``. Default is 0.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -2578,7 +2578,7 @@ class Conv1D(LayerBase):
         return {
             "layer": "Conv1D",
             "pad": self.pad,
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -2817,7 +2817,7 @@ class Conv2D(LayerBase):
             Number of pixels inserted between kernel elements. Effective kernel
             shape after dilation is: ``[kernel_rows * (d + 1) - d, kernel_cols
             * (d + 1) - d]``. Default is 0.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -2860,7 +2860,7 @@ class Conv2D(LayerBase):
         return {
             "layer": "Conv2D",
             "pad": self.pad,
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3258,7 +3258,7 @@ class Deconv2D(LayerBase):
         stride : int
             The stride/hop of the convolution kernels as they move over the
             input volume. Default is 1.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -3300,7 +3300,7 @@ class Deconv2D(LayerBase):
         return {
             "layer": "Deconv2D",
             "pad": self.pad,
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "in_ch": self.in_ch,
             "out_ch": self.out_ch,
             "stride": self.stride,
@@ -3482,7 +3482,7 @@ class RNNCell(LayerBase):
             The dimension of a single hidden state / output on a given timestep
         act_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The activation function for computing ``A[t]``. Default is `'Tanh'`.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -3537,7 +3537,7 @@ class RNNCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNNCell",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3707,7 +3707,7 @@ class LSTMCell(LayerBase):
         gate_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The gate function for computing the update, forget, and output
             gates. Default is `'Sigmoid'`.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -3809,7 +3809,7 @@ class LSTMCell(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTMCell",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -3984,7 +3984,7 @@ class RNN(LayerBase):
         act_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The activation function for computing ``A[t]``. Default is
             `'Tanh'`.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -4018,7 +4018,7 @@ class RNN(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "RNN",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),
@@ -4163,7 +4163,7 @@ class LSTM(LayerBase):
         gate_fn : str, :doc:`Activation <numpy_ml.neural_nets.activations>` object, or None
             The gate function for computing the update, forget, and output
             gates. Default is `'Sigmoid'`.
-        init : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+        kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
         optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
             The optimization strategy to use when performing gradient updates
@@ -4199,7 +4199,7 @@ class LSTM(LayerBase):
         """Return a dictionary containing the layer hyperparameters."""
         return {
             "layer": "LSTM",
-            "init": self.kernel_initializer,
+            "kernel_initializer": self.kernel_initializer,
             "n_in": self.n_in,
             "n_out": self.n_out,
             "act_fn": str(self.act_fn),

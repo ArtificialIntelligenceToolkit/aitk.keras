@@ -4,7 +4,7 @@ from collections import OrderedDict
 import numpy as np
 
 from ..utils import minibatch
-from ..layers import FullyConnected
+from ..layers import Dense
 from ..losses import WGAN_GPLoss
 
 
@@ -66,7 +66,7 @@ class WGAN_GP(object):
     def __init__(
         self,
         g_hidden=512,
-        init="he_uniform",
+        kernel_initializer="he_uniform",
         optimizer="RMSProp(lr=0.0001)",
         debug=False,
     ):
@@ -78,7 +78,7 @@ class WGAN_GP(object):
         g_hidden : int
             The number of units in the critic and generator hidden layers.
             Default is 512.
-        init : str
+        kernel_initializer : str
             The weight initialization strategy. Valid entries are
             {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform',
             'std_normal', 'trunc_normal'}. Default is "he_uniform".
@@ -90,7 +90,7 @@ class WGAN_GP(object):
             Whether to store additional intermediate output within
             ``self.derived_variables``. Default is False.
         """
-        self.init = init
+        self.kernel_initializer = kernel_initializer
         self.debug = debug
         self.g_hidden = g_hidden
         self.optimizer = optimizer
@@ -113,20 +113,20 @@ class WGAN_GP(object):
         FC1 -> ReLU -> FC2 -> ReLU -> FC3 -> ReLU -> FC4
         """
         self.generator = OrderedDict()
-        self.generator["FC1"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.generator["FC1"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.generator["FC2"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.generator["FC2"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.generator["FC3"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.generator["FC3"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.generator["FC4"] = FullyConnected(
+        self.generator["FC4"] = Dense(
             self.n_feats,
             act_fn="Affine(slope=1, intercept=0)",
             optimizer=self.optimizer,
-            init=self.init,
+            kernel_initializer=self.kernel_initializer,
         )
 
     def _build_critic(self):
@@ -134,26 +134,26 @@ class WGAN_GP(object):
         FC1 -> ReLU -> FC2 -> ReLU -> FC3 -> ReLU -> FC4
         """
         self.critic = OrderedDict()
-        self.critic["FC1"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.critic["FC1"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.critic["FC2"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.critic["FC2"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.critic["FC3"] = FullyConnected(
-            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, init=self.init
+        self.critic["FC3"] = Dense(
+            self.g_hidden, act_fn="ReLU", optimizer=self.optimizer, kernel_initializer=self.kernel_initializer
         )
-        self.critic["FC4"] = FullyConnected(
+        self.critic["FC4"] = Dense(
             1,
             act_fn="Affine(slope=1, intercept=0)",
             optimizer=self.optimizer,
-            init=self.init,
+            kernel_initializer=self.kernel_initializer,
         )
 
     @property
     def hyperparameters(self):
         return {
-            "init": self.init,
+            "kernel_initializer": self.kernel_initializer,
             "lambda_": self.lambda_,
             "g_hidden": self.g_hidden,
             "n_steps": self.n_steps,
