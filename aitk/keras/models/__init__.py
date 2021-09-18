@@ -74,9 +74,11 @@ class Model():
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
         for epoch in range(epochs):
+            batch_loss = 0
             for batch_data in self.enumerate_batches(inputs, targets, batch_size):
-                self.train_batch(batch_data)
+                batch_loss += self.train_batch(batch_data)
                 self.step += 1
+            #print(self.step, batch_loss)
 
     def flush_gradients(self):
         for layer in self.layers:
@@ -101,6 +103,7 @@ class Model():
         batch_loss = self.loss_function(targets, outputs)
         # Update every batch:
         self.update(batch_loss)
+        return batch_loss
 
     def update(self, batch_loss):
         for layer in reversed(self.layers):
@@ -109,11 +112,8 @@ class Model():
 
 
 class Sequential(Model):
-    def __init__(self, layers=None, name=None, optimizer=None,
-                 weight_initializer="glorot_uniform"):
+    def __init__(self, layers=None, name=None):
         super().__init__(name=name, layers=layers)
-        self.optimizer = optimizer
-        self.weight_initializer = weight_initializer
 
     def add(self, layer):
         if len(self._layers) == 0:
