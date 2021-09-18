@@ -24,18 +24,21 @@ class Model():
         print('_' * 65)
         print("Layer (type)                 Output Shape              Param #")
         print("=" * 65)
-        previous_out = self._layers[0].n_out
+        total_parameters = 0
+        # FIXME: sum up other, non-trainable params
+        other_params = 0
         for i, layer in enumerate(self.layers):
             layer_name = "%s (%s)" % (layer.name, layer.__class__.__name__)
+            parameters = sum([np.prod(item.shape) for item in layer.parameters.values()])
+            total_parameters += parameters
             output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
-            print(f"{layer_name:20s} {str(output_shape):>20s} {layer.n_out * previous_out:>20}")
-            previous_out = layer.n_out
+            print(f"{layer_name:20s} {str(output_shape):>20s} {parameters:>20}")
             if i != len(self.layers) - 1:
                 print("_" * 65)
         print("=" * 65)
-        print("Total params: {}")
-        print("Trainable params: {}")
-        print("Non-trainable params: {}")
+        print(f"Total params: {total_parameters}")
+        print(f"Trainable params: {total_parameters + other_params}")
+        print(f"Non-trainable params: {other_params}")
         print("_" * 65)
 
     def compile(self, optimizer, loss):
@@ -43,6 +46,13 @@ class Model():
             layer.optimizer = OptimizerInitializer(optimizer)()
         loss_function = LOSS_FUNCTIONS[loss]
         self.loss_function = loss_function()
+        # now, let's force the layers to initialize:
+        if isinstance(self._layers[0].n_out, numbers.Number):
+            shape = (1, self._layers[0].n_out)
+        else:
+            shape = tuple([1] + list(self._layers[0].n_out))
+        inputs = np.ndarray(shape)
+        self.predict(inputs)
 
     @property
     def layers(self):
@@ -71,6 +81,7 @@ class Model():
                 or a single (flat) array of values
         """
         if len(weights) > 0 and isinstance(weights[0], numbers.Number):
+            # Flat
             current = 0
             for layer in self.layers:
                 orig = layer.get_weights()
@@ -82,11 +93,13 @@ class Model():
                     current += total
                 layer.set_weights(new_weights)
         else:
-            # FIXME: assumes weights, biases
+            # FIXME: assumes weights, biases... now they exist, so just use sizes
             i = 0
             for layer in self.layers:
-                layer.set_weights([weights[i], weights[i+1]])
-                i += 2
+                orig = layer.get_weights()
+                count = len(orig)
+                layer.set_weights(weights[i:i+count])
+                i += count
 
     def fit(self, inputs, targets, batch_size=None, epochs=1):
         inputs = np.array(inputs, dtype=float)
