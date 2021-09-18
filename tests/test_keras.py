@@ -82,6 +82,6 @@ def test_fit():
             print(i, j, j1, j2)
             assert abs(j1 - j2) < 0.01, "outputs are too different"
 
-        model_tf.fit(inputs, targets, epochs=100, verbose=0)
-        model_aitk.fit(inputs, targets, epochs=100)
+        model_tf.fit(inputs, targets, epochs=1, verbose=0)
+        model_aitk.fit(inputs, targets, epochs=1)
         
