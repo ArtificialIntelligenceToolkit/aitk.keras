@@ -30,10 +30,11 @@ class Activation():
 class LayerBase(ABC):
     def __init__(self, name=None):
         """An abstract base class inherited by all neural network layers"""
+        self.name_cache = {}
         self.X = []
         self.act_fn = None
         self.trainable = True
-        self.name = name
+        self.name = self.make_name(name)
         self.optimizer = None
         self.default_weight_optimizer = "glorot_uniform"
 
@@ -43,6 +44,16 @@ class LayerBase(ABC):
         self.input_layers = []
 
         super().__init__()
+
+    def make_name(self, name):
+        if name is None:
+            class_name = self.__class__.__name__.lower()
+            count = self.name_cache.get(class_name, 0)
+            new_name = "%s_%s" % (class_name, count + 1)
+            self.name_cache[class_name] = count + 1
+            return new_name
+        else:
+            return name
 
     def set_optimizer(self, optimizer=None):
         optimizer = optimizer or self.default_optimizer
@@ -165,7 +176,7 @@ class LayerBase(ABC):
 class InputLayer(LayerBase):
     def __init__(self, input_shape, batch_size=None, name=None):
         super().__init__(name=name)
-        self.shape = input_shape
+        self.n_out = input_shape
 
     def forward(self, z, **kwargs):
         """Perform a forward pass through the layer"""
@@ -179,7 +190,7 @@ class InputLayer(LayerBase):
         raise NotImplementedError
 
 class DotProductAttention(LayerBase):
-    def __init__(self, scale=True, dropout_p=0, weight_initializer="glorot_uniform"):
+    def __init__(self, scale=True, dropout_p=0, weight_initializer="glorot_uniform", name=None):
         r"""
         A single "attention head" layer using a dot-product for the scoring function.
 
@@ -212,7 +223,7 @@ class DotProductAttention(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = init
         self.scale = scale
@@ -388,7 +399,7 @@ class DotProductAttention(LayerBase):
 
 
 class RBM(LayerBase):
-    def __init__(self, n_out, K=1, weight_initializer="glorot_uniform"):
+    def __init__(self, n_out, K=1, weight_initializer="glorot_uniform", name=None):
         """
         A Restricted Boltzmann machine with Bernoulli visible and hidden units.
 
@@ -407,7 +418,7 @@ class RBM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.K = K  # CD-K
         self.weight_initializer = weight_initializer
@@ -645,7 +656,7 @@ class RBM(LayerBase):
 
 
 class Add(LayerBase):
-    def __init__(self, act_fn=None):
+    def __init__(self, act_fn=None, name=None):
         """
         An "addition" layer that returns the sum of its inputs, passed through
         an optional nonlinearity.
@@ -662,7 +673,7 @@ class Add(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -741,7 +752,7 @@ class Add(LayerBase):
 
 
 class Multiply(LayerBase):
-    def __init__(self, act_fn=None):
+    def __init__(self, act_fn=None, name=None):
         """
         A multiplication layer that returns the *elementwise* product of its
         inputs, passed through an optional nonlinearity.
@@ -758,7 +769,7 @@ class Multiply(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
         self.act_fn = ActivationInitializer(act_fn)()
         self._init_params()
 
@@ -839,7 +850,7 @@ class Multiply(LayerBase):
 
 
 class Flatten(LayerBase):
-    def __init__(self, keep_dim="first"):
+    def __init__(self, keep_dim="first", name=None):
         """
         Flatten a multidimensional input into a 2D matrix.
 
@@ -855,7 +866,7 @@ class Flatten(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.keep_dim = keep_dim
         self._init_params()
@@ -936,7 +947,7 @@ class Flatten(LayerBase):
 
 
 class BatchNorm2D(LayerBase):
-    def __init__(self, momentum=0.9, epsilon=1e-5):
+    def __init__(self, momentum=0.9, epsilon=1e-5, name=None):
         """
         A batch normalization layer for two-dimensional inputs with an
         additional channel dimension.
@@ -989,7 +1000,7 @@ class BatchNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.in_ch = None
         self.out_ch = None
@@ -1173,7 +1184,7 @@ class BatchNorm2D(LayerBase):
 
 
 class BatchNorm1D(LayerBase):
-    def __init__(self, momentum=0.9, epsilon=1e-5):
+    def __init__(self, momentum=0.9, epsilon=1e-5, name=None):
         """
         A batch normalization layer for 1D inputs.
 
@@ -1225,7 +1236,7 @@ class BatchNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.n_in = None
         self.n_out = None
@@ -1387,7 +1398,7 @@ class BatchNorm1D(LayerBase):
 
 
 class LayerNorm2D(LayerBase):
-    def __init__(self, epsilon=1e-5):
+    def __init__(self, epsilon=1e-5, name=None):
         """
         A layer normalization layer for 2D inputs with an additional channel
         dimension.
@@ -1418,7 +1429,7 @@ class LayerNorm2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.in_ch = None
         self.out_ch = None
@@ -1565,7 +1576,7 @@ class LayerNorm2D(LayerBase):
 
 
 class LayerNorm1D(LayerBase):
-    def __init__(self, epsilon=1e-5):
+    def __init__(self, epsilon=1e-5, name=None):
         """
         A layer normalization layer for 1D inputs.
 
@@ -1595,7 +1606,7 @@ class LayerNorm1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.n_in = None
         self.n_out = None
@@ -1731,7 +1742,7 @@ class LayerNorm1D(LayerBase):
 
 class Embedding(LayerBase):
     def __init__(
-        self, n_out, vocab_size, pool=None, weight_initializer="glorot_uniform",
+        self, n_out, vocab_size, pool=None, weight_initializer="glorot_uniform", name=None
     ):
         """
         An embedding layer.
@@ -1764,7 +1775,7 @@ class Embedding(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
         fstr = "'pool' must be either 'sum', 'mean', or None but got '{}'"
         assert pool in ["sum", "mean", None], fstr.format(pool)
 
@@ -1950,7 +1961,7 @@ class Dense(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None
@@ -2092,7 +2103,7 @@ class Dense(LayerBase):
 
 
 class Softmax(LayerBase):
-    def __init__(self, dim=-1):
+    def __init__(self, dim=-1, name=None):
         r"""
         A softmax nonlinearity layer.
 
@@ -2123,7 +2134,7 @@ class Softmax(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None. Unused for this layer.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.dim = dim
         self.n_in = None
@@ -2247,6 +2258,7 @@ class SparseEvolution(LayerBase):
         epsilon=20,
         act_fn=None,
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         r"""
         A sparse Erdos-Renyi layer with evolutionary rewiring via the sparse
@@ -2282,7 +2294,7 @@ class SparseEvolution(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None
@@ -2488,6 +2500,7 @@ class Conv1D(LayerBase):
         dilation=0,
         act_fn=None,
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         """
         Apply a one-dimensional convolution kernel over an input volume.
@@ -2531,7 +2544,7 @@ class Conv1D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.pad = pad
         self.weight_initializer = weight_initializer
@@ -2769,6 +2782,7 @@ class Conv2D(LayerBase):
         dilation=0,
         act_fn=None,
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         """
         Apply a two-dimensional convolution kernel over an input volume.
@@ -2811,7 +2825,7 @@ class Conv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.pad = pad
         self.weight_initializer = weight_initializer
@@ -3036,7 +3050,7 @@ class Conv2D(LayerBase):
 
 
 class Pool2D(LayerBase):
-    def __init__(self, kernel_shape, stride=1, pad=0, mode="max"):
+    def __init__(self, kernel_shape, stride=1, pad=0, mode="max", name=None):
         """
         A single two-dimensional pooling layer.
 
@@ -3057,7 +3071,7 @@ class Pool2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.pad = pad
         self.mode = mode
@@ -3218,6 +3232,7 @@ class Deconv2D(LayerBase):
         stride=1,
         act_fn=None,
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         """
         Apply a two-dimensional "deconvolution" to an input volume.
@@ -3251,7 +3266,7 @@ class Deconv2D(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.pad = pad
         self.weight_initializer = weight_initializer
@@ -3436,7 +3451,7 @@ class Deconv2D(LayerBase):
 
 
 class RNNCell(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform"):
+    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform", name=None):
         r"""
         A single step of a vanilla (Elman) RNN.
 
@@ -3475,7 +3490,7 @@ class RNNCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None
@@ -3652,6 +3667,7 @@ class LSTMCell(LayerBase):
         act_fn="Tanh",
         gate_fn="Sigmoid",
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         """
         A single step of a long short-term memory (LSTM) RNN.
@@ -3699,7 +3715,7 @@ class LSTMCell(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None
@@ -3956,7 +3972,7 @@ class LSTMCell(LayerBase):
 
 
 class RNN(LayerBase):
-    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform"):
+    def __init__(self, n_out, act_fn="Tanh", weight_initializer="glorot_uniform", name=None):
         """
         A single vanilla (Elman)-RNN layer.
 
@@ -3976,7 +3992,7 @@ class RNN(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
             parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None
@@ -4133,6 +4149,7 @@ class LSTM(LayerBase):
         act_fn="Tanh",
         gate_fn="Sigmoid",
         weight_initializer="glorot_uniform",
+        name=None,
     ):
         """
         A single long short-term memory (LSTM) RNN layer.
@@ -4154,7 +4171,7 @@ class LSTM(LayerBase):
             <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
             default parameters. Default is None.
         """  # noqa: E501
-        super().__init__()
+        super().__init__(name=name)
 
         self.weight_initializer = weight_initializer
         self.n_in = None

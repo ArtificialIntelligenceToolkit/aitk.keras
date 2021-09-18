@@ -19,6 +19,25 @@ class Model():
         self.train = True
         self.step = 0
 
+    def summary(self):
+        print(f'Model: "{self.name}"')
+        print('_' * 65)
+        print("Layer (type)                 Output Shape              Param #")
+        print("=" * 65)
+        previous_out = self._layers[0].n_out
+        for i, layer in enumerate(self.layers):
+            layer_name = "%s (%s)" % (layer.name, layer.__class__.__name__)
+            output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
+            print(f"{layer_name:20s} {str(output_shape):>20s} {layer.n_out * previous_out:>20}")
+            previous_out = layer.n_out
+            if i != len(self.layers) - 1:
+                print("_" * 65)
+        print("=" * 65)
+        print("Total params: {}")
+        print("Trainable params: {}")
+        print("Non-trainable params: {}")
+        print("_" * 65)
+
     def compile(self, optimizer, loss):
         for layer in self.layers:
             layer.optimizer = OptimizerInitializer(optimizer)()
@@ -112,7 +131,7 @@ class Model():
 
 
 class Sequential(Model):
-    def __init__(self, layers=None, name=None):
+    def __init__(self, layers=None, name="sequential"):
         super().__init__(name=name, layers=layers)
 
     def add(self, layer):
