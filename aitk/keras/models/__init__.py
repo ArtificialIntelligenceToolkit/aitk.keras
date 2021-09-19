@@ -17,7 +17,7 @@ NAME_CACHE = {}
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None, layers=None):
         self.name = self.make_name(name)
-        self._layers = layers if layers is not None else []
+        self.layers = layers if layers is not None else []
         self.train = True
         self.step = 0
         if inputs is not None:
@@ -62,33 +62,30 @@ class Model():
 
     def compile(self, optimizer, loss):
         for layer in self.layers:
-            layer.optimizer = OptimizerInitializer(optimizer)()
-        loss_function = LOSS_FUNCTIONS[loss]
-        self.loss_function = loss_function()
+            if not isinstance(layer, InputLayer):
+                layer.optimizer = OptimizerInitializer(optimizer)()
+                loss_function = LOSS_FUNCTIONS[loss]
+                self.loss_function = loss_function()
         # now, let's force the layers to initialize:
-        if isinstance(self._layers[0].n_out, numbers.Number):
-            shape = (1, self._layers[0].n_out)
+        # FIXME: input layers:
+        if isinstance(self.layers[0].n_out, numbers.Number):
+            shape = (1, self.layers[0].n_out)
         else:
-            shape = tuple([1] + list(self._layers[0].n_out))
+            shape = tuple([1] + list(self.layers[0].n_out))
         inputs = np.ndarray(shape)
         self.predict(inputs)
-
-    @property
-    def layers(self):
-        if len(self._layers) > 0:
-            return self._layers[1:]
-        else:
-            return []
 
     def get_weights(self, flat=False):
         array = []
         if flat:
             for layer in self.layers:
-                for weight in layer.get_weights():
-                    array.extend(weight.flatten())
+                if layer.has_trainable_params():
+                    for weight in layer.get_weights():
+                        array.extend(weight.flatten())
         else:
             for layer in self.layers:
-                array.extend(layer.get_weights())
+                if layer.has_trainable_params():
+                    array.extend(layer.get_weights())
         return array
 
     def set_weights(self, weights):
@@ -103,21 +100,23 @@ class Model():
             # Flat
             current = 0
             for layer in self.layers:
-                orig = layer.get_weights()
-                new_weights = []
-                for item in orig:
-                    total = functools.reduce(operator.mul, item.shape, 1)
-                    w = np.array(weights[current:current + total], dtype=float)
-                    new_weights.append(w.reshape(item.shape))
-                    current += total
-                layer.set_weights(new_weights)
+                if layer.has_trainable_params():
+                    orig = layer.get_weights()
+                    new_weights = []
+                    for item in orig:
+                        total = functools.reduce(operator.mul, item.shape, 1)
+                        w = np.array(weights[current:current + total], dtype=float)
+                        new_weights.append(w.reshape(item.shape))
+                        current += total
+                    layer.set_weights(new_weights)
         else:
             i = 0
             for layer in self.layers:
-                orig = layer.get_weights()
-                count = len(orig)
-                layer.set_weights(weights[i:i+count])
-                i += count
+                if layer.has_trainable_params():
+                    orig = layer.get_weights()
+                    count = len(orig)
+                    layer.set_weights(weights[i:i+count])
+                    i += count
 
     def fit(self, inputs, targets, batch_size=32, epochs=1):
         inputs = np.array(inputs, dtype=float)
@@ -132,7 +131,8 @@ class Model():
 
     def flush_gradients(self):
         for layer in self.layers:
-            layer.flush_gradients()
+            if layer.has_trainable_params():
+                layer.flush_gradients()
 
     def enumerate_batches(self, inputs, targets, batch_size):
         current_row = 0
@@ -158,7 +158,8 @@ class Model():
         )
 
         for layer in reversed(self.layers):
-            dY_pred = layer.backward(dY_pred)
+            if not isinstance(layer, InputLayer):
+                dY_pred = layer.backward(dY_pred)
 
         batch_loss = self.loss_function(targets, outputs)
         # FIXME: compute other metrics, and log them
@@ -169,28 +170,29 @@ class Model():
 
     def update(self, batch_loss):
         for layer in reversed(self.layers):
-            layer.update(batch_loss)
+            if not isinstance(layer, InputLayer):
+                layer.update(batch_loss)
         self.flush_gradients()
 
     def add(self, layer):
-        if len(self._layers) == 0:
+        if len(self.layers) == 0:
             if isinstance(layer, InputLayer):
-                self._layers.append(layer)
+                self.layers.append(layer)
             else:
                 input_layer = InputLayer(input_shape=layer.input_shape)
-                self._layers.append(input_layer)
-                self._layers.append(layer)
+                self.layers.append(input_layer)
+                self.layers.append(layer)
                 layer.add_input_layer(input_layer)
         elif isinstance(layer, Activation):
-            # FIXME:
-            self._layers[-1].act_fn = laer.activation
+            # FIXME: is this how to handle activations?
+            self.layers[-1].act_fn = laer.activation
         else:
-            layer.add_input_layer(self._layers[-1])
-            self._layers.append(layer)
+            layer.add_input_layer(self.layers[-1])
+            self.layers.append(layer)
 
     def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
-        for layer in self._layers:
+        for layer in self.layers:
             outputs = inputs = layer.forward(inputs, retain_derived=retain_derived)
         return outputs
 

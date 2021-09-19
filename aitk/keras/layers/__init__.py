@@ -65,6 +65,9 @@ class LayerBase(ABC):
         optimizer = optimizer or self.default_kernel_optimizer
         self.optimizer = OptimizerInitializer(optimizer)()
 
+    def has_trainable_params(self):
+        return self.parameters != {}
+
     @abstractmethod
     def _init_params(self, **kwargs):
         raise NotImplementedError
@@ -183,6 +186,7 @@ class InputLayer(LayerBase):
     def __init__(self, input_shape, batch_size=None, name=None):
         super().__init__(name=name)
         self.n_out = input_shape
+        self.trainable = False
 
     def forward(self, z, **kwargs):
         """Perform a forward pass through the layer"""
