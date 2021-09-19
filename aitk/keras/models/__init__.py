@@ -60,11 +60,11 @@ class Model():
         # FIXME: sum up other, non-trainable params
         other_params = 0
         for i, layer in enumerate(self.layers):
-            layer_name = "%s (%s)" % (layer.name, layer.__class__.__name__)
+            layer_name = ("%s (%s)" % (layer.name, layer.__class__.__name__))[:20]
             parameters = sum([np.prod(item.shape) for item in layer.parameters.values()])
             total_parameters += parameters
             output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
-            print(f"{layer_name:20s} {str(output_shape):>20s} {parameters:>20}")
+            print(f"{layer_name:20s} {str(output_shape)[:20]:>20s} {parameters:>20}")
             if i != len(self.layers) - 1:
                 print("_" * 65)
         print("=" * 65)
@@ -223,4 +223,4 @@ class Model():
 
 class Sequential(Model):
     def __init__(self, layers=None, name="sequential"):
-        super().__init__(name=name, layers=layers)
+        super().__init__(name=name)
