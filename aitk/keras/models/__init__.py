@@ -20,7 +20,10 @@ class Model():
         self.layers = layers if layers is not None else []
         self.train = True
         self.step = 0
+        # Build a model graph from inputs to outputs:
         if inputs is not None:
+            # FIXME: get paths between all inputs and outputs
+            # Don't add items already in layers
             while True:
                 self.add(inputs)
                 if inputs == outputs:
@@ -81,7 +84,10 @@ class Model():
             for layer in self.layers:
                 if layer.has_trainable_params():
                     for weight in layer.get_weights():
-                        array.extend(weight.flatten())
+                        if isinstance(weight, numbers.Number):
+                            array.extend(weight)
+                        else:
+                            array.extend(weight.flatten())
         else:
             for layer in self.layers:
                 if layer.has_trainable_params():
@@ -104,9 +110,13 @@ class Model():
                     orig = layer.get_weights()
                     new_weights = []
                     for item in orig:
-                        total = functools.reduce(operator.mul, item.shape, 1)
-                        w = np.array(weights[current:current + total], dtype=float)
-                        new_weights.append(w.reshape(item.shape))
+                        if isinstance(item, numbers.Number):
+                            total = 1
+                            new_weights.append(item)
+                        else:
+                            total = functools.reduce(operator.mul, item.shape, 1)
+                            w = np.array(weights[current:current + total], dtype=float)
+                            new_weights.append(w.reshape(item.shape))
                         current += total
                     layer.set_weights(new_weights)
         else:
