@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+# **************************************************************
+# aitk.keras: A Python Keras model API
+#
+# Copyright (c) 2021 AITK Developers
+#
+# https://github.com/ArtificialIntelligenceToolkit/aitk.keras
+#
+# **************************************************************
+
 """A collection of composable layer objects for building neural networks"""
 from abc import ABC, abstractmethod
 

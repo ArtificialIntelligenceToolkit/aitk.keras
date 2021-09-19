@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+# **************************************************************
+# aitk.keras: A Python Keras model API
+#
+# Copyright (c) 2021 AITK Developers
+#
+# https://github.com/ArtificialIntelligenceToolkit/aitk.keras
+#
+# **************************************************************
+
 from aitk.keras.layers import InputLayer, Activation
 from aitk.keras.losses import MeanSquaredError, CrossEntropy
 from aitk.keras.initializers import OptimizerInitializer
@@ -10,15 +20,15 @@ import operator
 LOSS_FUNCTIONS = {
     "mse": MeanSquaredError,
     "crossentropy": CrossEntropy,
+    # FIXME: add more error functions
 }
 
 NAME_CACHE = {}
 
 class Model():
-    def __init__(self, inputs=None, outputs=None, name=None, layers=None):
+    def __init__(self, inputs=None, outputs=None, name=None):
         self.name = self.make_name(name)
-        self.layers = layers if layers is not None else []
-        self.train = True
+        self.layers = []
         self.step = 0
         # Build a model graph from inputs to outputs:
         if inputs is not None:
@@ -128,7 +138,12 @@ class Model():
                     layer.set_weights(weights[i:i+count])
                     i += count
 
-    def fit(self, inputs, targets, batch_size=32, epochs=1):
+    def fit(self, inputs, targets, batch_size=32, epochs=1, verbose="auto", callbacks=None,
+            shuffle=True):
+        # FIXME: use verbose
+        # FIXME: use callbacks
+        # FIXME: use shuffle
+        # FIXME: log metrics
         inputs = np.array(inputs, dtype=float)
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
