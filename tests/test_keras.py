@@ -133,8 +133,8 @@ def compare_models(optimizer, loss):
             #print(i, j, j1, j2)
             assert abs(j1 - j2) < 0.01, ("%s %s: outputs are too different" % (optimizer, loss))
 
-        model_tf.fit(inputs, targets, epochs=epochs, verbose=0)
-        model_aitk.fit(inputs, targets, epochs=epochs)
+        model_tf.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False)
+        model_aitk.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False)
 
 def compare_models_functional(optimizer, loss):
     model_tf = build_model_tf_functional(optimizer, loss)
@@ -153,8 +153,8 @@ def compare_models_functional(optimizer, loss):
             #print(i, j, j1, j2)
             assert abs(j1 - j2) < 0.01, ("%s %s: outputs are too different" % (optimizer, loss))
 
-        model_tf.fit(inputs, targets, epochs=epochs, verbose=0)
-        model_aitk.fit(inputs, targets, epochs=epochs)
+        model_tf.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False)
+        model_aitk.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False)
 
 def test_fit():
     for optimizer in ["adam", "rmsprop"]: # sgd diverages; lr and momentum the same
@@ -165,6 +165,14 @@ def test_fit_functional():
     for optimizer in ["adam", "rmsprop"]: # sgd diverages; lr and momentum the same
         for loss in ["mse"]:
             compare_models_functional(optimizer, loss)
+
+def test_fit_sgd():
+    from aitk.keras.optimizers import SGD
+    model_aitk = build_model_aitk(SGD(lr=.1, momentum=.9), "mse")
+    model_aitk.fit(inputs, targets, epochs=50)
+    outputs = model_aitk.predict(inputs)
+    assert [round(v[0]) for v in outputs] == [0, 1, 1, 0]
+
 
 #def test_multiple_outputs():
 #    model_tf = build_model_tf_multiple_outputs("adam", "mse")

@@ -39,7 +39,7 @@ class ActivationInitializer(object):
         if param is None:
             act = Affine(slope=1, intercept=0)
         elif isinstance(param, ActivationBase):
-            act = param
+            act = param.copy()
         elif isinstance(param, str):
             act = self.init_from_str(param)
         else:
@@ -90,7 +90,7 @@ class SchedulerInitializer(object):
         if param is None:
             scheduler = ConstantScheduler(self.lr)
         elif isinstance(param, SchedulerBase):
-            scheduler = param
+            scheduler = param.copy()
         elif isinstance(param, str):
             scheduler = self.init_from_str()
         elif isinstance(param, dict):
@@ -151,7 +151,7 @@ class OptimizerInitializer(object):
         if param is None:
             opt = SGD()
         elif isinstance(param, OptimizerBase):
-            opt = param
+            opt = param.copy()
         elif isinstance(param, str):
             opt = self.init_from_str()
         elif isinstance(param, dict):
