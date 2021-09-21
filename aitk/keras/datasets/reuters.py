@@ -145,7 +145,6 @@ def load_data(path='reuters.npz',
   return (x_train, y_train), (x_test, y_test)
 
 
-@keras_export('keras.datasets.reuters.get_word_index')
 def get_word_index(path='reuters_word_index.json'):
   """Retrieves a dict mapping words to their index in the Reuters dataset.
 
