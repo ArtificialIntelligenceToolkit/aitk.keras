@@ -94,6 +94,7 @@ class LayerBase(ABC):
 
     def add_input_layer(self, layer):
         self.input_layers.append(layer)
+        layer.output_layers.append(self)
 
     def freeze(self):
         """

@@ -29,16 +29,22 @@ class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
         self.name = self.make_name(name)
         self.layers = []
+        self.layer_map = {}
         self.step = 0
         # Build a model graph from inputs to outputs:
         if inputs is not None:
             # FIXME: get paths between all inputs and outputs
             # Don't add items already in layers
             while True:
-                self.add(inputs)
+                # FIXME: add graph
+                if isinstance(inputs, (list, tuple)):
+                    for input in inputs:
+                        self._add(input)
+                else:
+                    self._add(inputs)
+                # FIXME: using only one input; need to make graph
                 if inputs == outputs:
                     break
-                # FIXME: using only one input; need to make graph
                 inputs = inputs.output_layers[0]
 
     def make_name(self, name):
@@ -199,7 +205,10 @@ class Model():
                 layer.update(batch_loss)
         self.flush_gradients()
 
-    def add(self, layer):
+    def _add(self, layer):
+        if layer.name in self.layer_map:
+            raise AttributeError("duplicate layer name: '%s'" % layer.name)
+        self.layer_map[layer.name] = layer
         if len(self.layers) == 0:
             if isinstance(layer, InputLayer):
                 self.layers.append(layer)
@@ -210,17 +219,46 @@ class Model():
                 layer.add_input_layer(input_layer)
         elif isinstance(layer, Activation):
             # FIXME: is this how to handle activations?
-            self.layers[-1].act_fn = laer.activation
+            self.layers[-1].act_fn = layer.activation
         else:
+            # FIXME: only for sequence
             layer.add_input_layer(self.layers[-1])
             self.layers.append(layer)
 
+    def get_output_layers(self):
+        return [layer for layer in self.layers if len(layer.output_layers) == 0]
+
+    def get_input_layers(self):
+        return [layer for layer in self.layers if len(layer.input_layers) == 0]
+
     def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
-        for layer in self.layers:
-            outputs = inputs = layer.forward(inputs, retain_derived=retain_derived)
-        return outputs
+        results = []
+        for layer in self.get_output_layers():
+            results.append(self._predict_to(inputs, layer, retain_derived=retain_derived))
+        if len(results) == 1:
+            return results[0]
+        else:
+            return results
+
+    def _predict_to(self, inputs, layer, retain_derived=False, cache={}):
+        if isinstance(layer, InputLayer):
+            return inputs
+
+        results = []
+        for input_layer in layer.input_layers:
+            if input_layer.name in cache:
+                results.append(cache[input_layer.name])
+            else:
+                results.append(self._predict_to(inputs, input_layer, retain_derived))
+        if len(results) == 1:
+            return layer.forward(results[0], retain_derived=retain_derived)
+        else:
+            return layer.forward(results, retain_derived=retain_derived)
 
 class Sequential(Model):
     def __init__(self, layers=None, name="sequential"):
         super().__init__(name=name)
+
+    def add(self, layer):
+        return self._add(layer)
