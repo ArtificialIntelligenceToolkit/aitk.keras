@@ -48,7 +48,7 @@ setup_args = dict(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=setuptools.find_namespace_packages(include=['aitk.*']),
-    install_requires=["setuptools", "numpy"],
+    install_requires=["setuptools", "numpy", "keras_preprocessing"],
     python_requires=">=3.6",
     license="BSD-3-Clause",
     platforms="Linux, Mac OS X, Windows",
