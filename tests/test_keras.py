@@ -3,14 +3,16 @@ import numbers
 
 # XOR:
 inputs = [[0, 0], [0, 1], [1, 0], [1, 1]]
+inputs1 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+inputs2 = [np.array([[0], [0], [1], [1]]),
+           np.array([[0], [1], [0], [1]])]
 targets = [[0], [1], [1], [0]]
-inputs2 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 targets2 = [
     np.array([[0], [1], [1], [0]]),
     np.array([[0], [1], [1], [0]]),
 ]
 
-def build_model_tf(optimizer, loss):
+def build_model_tf(optimizer="adam", loss="mse"):
     from tensorflow.keras.layers import InputLayer, Dense, Activation
     from tensorflow.keras.models import Sequential
 
@@ -21,7 +23,7 @@ def build_model_tf(optimizer, loss):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
-def build_model_aitk(optimizer, loss):
+def build_model_aitk(optimizer="adam", loss="mse"):
     from aitk.keras.layers import InputLayer, Dense, Activation
     from aitk.keras.models import Sequential
 
@@ -32,7 +34,7 @@ def build_model_aitk(optimizer, loss):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
-def build_model_aitk_functional(optimizer, loss):
+def build_model_aitk_functional(optimizer="adam", loss="mse"):
     from aitk.keras.layers import Input, Dense, Activation
     from aitk.keras.models import Model
 
@@ -46,7 +48,7 @@ def build_model_aitk_functional(optimizer, loss):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
-def build_model_tf_functional(optimizer, loss):
+def build_model_tf_functional(optimizer="adam", loss="mse"):
     from tensorflow.keras.layers import Input, Dense, Activation
     from tensorflow.keras.models import Model
 
@@ -60,7 +62,36 @@ def build_model_tf_functional(optimizer, loss):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
-def build_model_tf_multiple_outputs(optimizer, loss):
+def build_model_tf_multiple_inputs(optimizer="adam", loss="mse"):
+    from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
+    from tensorflow.keras.models import Model
+
+    input1 = Input(1, name="input1")
+    input2 = Input(1, name="input2")
+    input_cat = Concatenate()([input1, input2])
+    hidden = Dense(8, activation="tanh", name="hidden")(input_cat)
+    output = Dense(1, activation="sigmoid", name="output1")(hidden)
+
+    model = Model(inputs=[input1, input2], outputs=output)
+    model.compile(optimizer=optimizer, loss=loss)
+    return model
+
+def build_model_tf_multiple_both(optimizer="adam", loss="mse"):
+    from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
+    from tensorflow.keras.models import Model
+
+    input1 = Input(1, name="input1")
+    input2 = Input(1, name="input2")
+    input_cat = Concatenate()([input1, input2])
+    hidden = Dense(8, activation="tanh", name="hidden")(input_cat)
+    output1 = Dense(1, activation="sigmoid", name="output1")(hidden)
+    output2 = Dense(1, activation="sigmoid", name="output2")(hidden)
+
+    model = Model(inputs=[input1, input2], outputs=[output1, output2])
+    model.compile(optimizer=optimizer, loss=loss)
+    return model
+
+def build_model_tf_multiple_outputs(optimizer="adam", loss="mse"):
     from tensorflow.keras.layers import Input, Dense, Activation
     from tensorflow.keras.models import Model
 
@@ -73,7 +104,7 @@ def build_model_tf_multiple_outputs(optimizer, loss):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
-def build_model_aitk_multiple_outputs(optimizer, loss):
+def build_model_aitk_multiple_outputs(optimizer="adam", loss="mse"):
     from aitk.keras.layers import Input, Dense, Activation
     from aitk.keras.models import Model
 
@@ -187,8 +218,8 @@ def test_multiple_outputs():
     model_aitk.set_weights(tf_weights)
 
     for i in range(10):
-        outputs_tf = model_tf.predict(inputs2)
-        outputs_aitk = model_aitk.predict(inputs2)
+        outputs_tf = model_tf.predict(inputs1)
+        outputs_aitk = model_aitk.predict(inputs1)
 
         for out_tf, out_aitk in zip(outputs_tf, outputs_aitk):
             for row_tf, row_aitk in zip(out_tf, out_aitk):
@@ -198,3 +229,33 @@ def test_multiple_outputs():
         # Need to fix backward
         #model_tf.fit(inputs, targets2, epochs=1)
         #model_aitk.fit(inputs, targets2, epochs=1)
+
+def build_topological_sort():
+    from aitk.keras.layers import Input, Dense, Activation
+    from aitk.keras.models import Model
+
+    i1 = Input(1)
+    i2 = Input(1)
+    h1 = Dense(5)
+    h2 = Dense(5)
+    h3 = Dense(5)
+    o1 = Dense(2)
+    o2 = Dense(2)
+
+    h4 = h1(i1)
+    h5 = h2(i2)
+
+    h6 = h3(h4)
+    h7 = h3(h5)
+
+    out1 = o1(h6)
+    out1 = o1(i1) # shortcut
+    out2 = o2(h7)
+
+    model = Model(inputs=[i1, i2], outputs=[out1, out2])
+    #model.compile(optimizer="adam", loss="mse") # fix forward
+    return model
+
+def test_topological_sort():
+    model = build_topological_sort()
+    assert len(model.layers) == 7

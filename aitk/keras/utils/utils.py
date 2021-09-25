@@ -1,5 +1,27 @@
 import numpy as np
 
+def topological_sort(layers):
+    """
+    Given a list of layers, produce a topological
+    sorted list, from input(s) to output(s).
+    """
+    stack = []
+    visited = set()
+    for layer in layers:
+        if layer not in visited:
+            visit_node(layer, stack, visited)
+    return reversed(stack)
+
+def visit_node(layer, stack, visited):
+    """
+    Utility function for topological_sort.
+    """
+    visited.add(layer)
+    for out_layer in layer.output_layers:
+        if out_layer not in visited:
+            visit_node(out_layer, stack, visited)
+    stack.append(layer)
+
 #######################################################################
 #                           Training Utils                            #
 #######################################################################

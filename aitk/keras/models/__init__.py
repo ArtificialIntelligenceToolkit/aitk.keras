@@ -11,6 +11,7 @@
 from ..layers import Input, Activation
 from ..losses import MeanSquaredError, CrossEntropy
 from ..initializers import OptimizerInitializer
+from ..utils import topological_sort
 
 import numpy as np
 import numbers
@@ -27,9 +28,12 @@ NAME_CACHE = {}
 
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
+        self.sequential = False
         self.name = self.make_name(name)
         self.layers = []
         self.layer_map = {}
+        self._input_layers = None
+        self._output_layers = None
         self.step = 0
         # Build a model graph from inputs to outputs:
         if inputs is not None and outputs is not None:
@@ -51,6 +55,18 @@ class Model():
                 else:
                     queue.extend(layer.output_layers)
 
+    def get_input_layers(self):
+        if self._input_layers is None:
+            return [layer for layer in self.layers if len(layer.input_layers) == 0]
+        else:
+            return self._input_layers
+
+    def get_output_layers(self):
+        if self._output_layers is None:
+            return [layer for layer in self.layers if len(layer.output_layers) == 0]
+        else:
+            return self._output_layers
+
     def connect(self, in_layer, out_layer):
         """
         Connect first layer to second layer.
@@ -64,7 +80,10 @@ class Model():
         if name is None:
             class_name = self.__class__.__name__.lower()
             count = NAME_CACHE.get(class_name, 0)
-            new_name = "%s_%s" % (class_name, count + 1)
+            if count == 0:
+                new_name = class_name
+            else:
+                new_name = "%s_%s" % (class_name, count)
             NAME_CACHE[class_name] = count + 1
             return new_name
         else:
@@ -78,18 +97,18 @@ class Model():
         total_parameters = 0
         # FIXME: sum up other, non-trainable params
         other_params = 0
-        for i, layer in enumerate(self.layers):
-            layer_name = ("%s (%s)" % (layer.name, layer.__class__.__name__))[:20]
-            parameters = sum([np.prod(item.shape) for item in layer.parameters.values()])
+        for i, layer in enumerate(topological_sort(self.get_input_layers())):
+            layer_name = ("%s (%s)" % (layer.name, layer.__class__.__name__))[:25]
+            parameters = sum([np.prod(item.shape) for item in layer.parameters.values() if item is not None])
             total_parameters += parameters
             output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
-            print(f"{layer_name:20s} {str(output_shape)[:20]:>20s} {parameters:>20}")
+            print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {parameters:>20,}")
             if i != len(self.layers) - 1:
                 print("_" * 65)
         print("=" * 65)
-        print(f"Total params: {total_parameters}")
-        print(f"Trainable params: {total_parameters + other_params}")
-        print(f"Non-trainable params: {other_params}")
+        print(f"Total params: {total_parameters:,}")
+        print(f"Trainable params: {total_parameters + other_params:,}")
+        print(f"Non-trainable params: {other_params:,}")
         print("_" * 65)
 
     def compile(self, optimizer, loss):
@@ -223,23 +242,29 @@ class Model():
     def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
         results = []
-        for layer in self._output_layers:
-            results.append(self._predict_to(inputs, layer, retain_derived=retain_derived))
+        # First, load the inputs:
+        if self.sequential:
+            cache = {self._input_layers[0].name: inputs}
+        else:
+            if len(self._input_layers) > 1:
+                cache = {self._input_layers[i].name: input for i, input in enumerate(inputs)}
+            else:
+                cache = {self._input_layers[0].name: inputs}
+        # Now we work backwards from ouputs:
+        for layer in self.get_output_layers():
+            results.append(self._predict_to(layer, retain_derived, cache))
         if len(results) == 1:
             return results[0]
         else:
             return results
 
-    def _predict_to(self, inputs, layer, retain_derived=False, cache={}):
-        if isinstance(layer, Input):
-            return inputs
-
+    def _predict_to(self, layer, retain_derived=False, cache={}):
         results = []
         for input_layer in layer.input_layers:
             if input_layer.name in cache:
                 results.append(cache[input_layer.name])
             else:
-                results.append(self._predict_to(inputs, input_layer, retain_derived))
+                results.append(self._predict_to(input_layer, retain_derived, cache))
         if len(results) == 1:
             return layer.forward(results[0], retain_derived=retain_derived)
         else:
@@ -248,6 +273,10 @@ class Model():
 class Sequential(Model):
     def __init__(self, layers=None, name="sequential"):
         super().__init__(name=name)
+        self.sequential = True
+        if layers is not None:
+            for layer in layers:
+                self.add(layer)
 
     def add(self, layer):
         if layer.name in self.layer_map:
@@ -267,4 +296,3 @@ class Sequential(Model):
             input_layer = self.layers[-1]
             self.connect(input_layer, layer)
             self.layers.append(layer)
-

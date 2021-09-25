@@ -66,7 +66,10 @@ class LayerBase(ABC):
         if name is None:
             class_name = self.__class__.__name__.lower()
             count = NAME_CACHE.get(class_name, 0)
-            new_name = "%s_%s" % (class_name, count + 1)
+            if count == 0:
+                new_name = class_name
+            else:
+                new_name = "%s_%s" % (class_name, count)
             NAME_CACHE[class_name] = count + 1
             return new_name
         else:
