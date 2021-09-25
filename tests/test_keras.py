@@ -4,6 +4,11 @@ import numbers
 # XOR:
 inputs = [[0, 0], [0, 1], [1, 0], [1, 1]]
 targets = [[0], [1], [1], [0]]
+inputs2 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+targets2 = [
+    np.array([[0], [1], [1], [0]]),
+    np.array([[0], [1], [1], [0]]),
+]
 
 def build_model_tf(optimizer, loss):
     from tensorflow.keras.layers import InputLayer, Dense, Activation
@@ -174,6 +179,22 @@ def test_fit_sgd():
     assert [round(v[0]) for v in outputs] == [0, 1, 1, 0]
 
 
-#def test_multiple_outputs():
-#    model_tf = build_model_tf_multiple_outputs("adam", "mse")
-#    model_aitk = build_model_aitk_multiple_outputs("adam", "mse")
+def test_multiple_outputs():
+    model_tf = build_model_tf_multiple_outputs("adam", "mse")
+    tf_weights = model_tf.get_weights()
+
+    model_aitk = build_model_aitk_multiple_outputs("adam", "mse")
+    model_aitk.set_weights(tf_weights)
+
+    for i in range(10):
+        outputs_tf = model_tf.predict(inputs2)
+        outputs_aitk = model_aitk.predict(inputs2)
+
+        for out_tf, out_aitk in zip(outputs_tf, outputs_aitk):
+            for row_tf, row_aitk in zip(out_tf, out_aitk):
+                for item_tf, item_aitk in zip(row_tf, row_aitk):
+                    assert abs(item_tf - item_aitk) < 0.1
+
+        # Need to fix backward
+        #model_tf.fit(inputs, targets2, epochs=1)
+        #model_aitk.fit(inputs, targets2, epochs=1)

@@ -59,6 +59,7 @@ class LayerBase(ABC):
 
     def __call__(self, input_layer):
         input_layer.output_layers.append(self)
+        self.input_layers.append(input_layer)
         return self
 
     def make_name(self, name):
@@ -91,10 +92,6 @@ class LayerBase(ABC):
     def backward(self, out, **kwargs):
         """Perform a backward pass through the layer"""
         raise NotImplementedError
-
-    def add_input_layer(self, layer):
-        self.input_layers.append(layer)
-        layer.output_layers.append(self)
 
     def freeze(self):
         """
@@ -193,7 +190,7 @@ class LayerBase(ABC):
         }
 
 
-class InputLayer(LayerBase):
+class Input(LayerBase):
     def __init__(self, input_shape, batch_size=None, name=None):
         super().__init__(name=name)
         self.n_out = input_shape
@@ -210,7 +207,7 @@ class InputLayer(LayerBase):
     def _init_params(self, **kwargs):
         raise NotImplementedError
 
-Input = InputLayer
+InputLayer = Input
 
 class DotProductAttention(LayerBase):
     def __init__(self, scale=True, dropout_p=0, kernel_initializer="glorot_uniform", name=None):

@@ -133,16 +133,17 @@ async def load_data_async(path='mnist.npz'):
       https://creativecommons.org/licenses/by-sa/3.0/)
     """
     for origin_folder, file_hash in origin_folders:
-        try:
-            print("Downloading data from %s" % (origin_folder + 'mnist.npz'))
-            import js
-            response = await js.fetch(origin_folder + 'mnist.npz')
-            fp = io.BytesIO((await response.arrayBuffer()).to_py())
-            bytes = fp.read()
-            with open(path, "wb") as fp:
-                fp.write(bytes)
-        except Exception:
-            print("Could not load dataset")
+        if not os.path.isfile(path):
+            try:
+                print("Downloading data from %s" % (origin_folder + 'mnist.npz'))
+                import js
+                response = await js.fetch(origin_folder + 'mnist.npz')
+                fp = io.BytesIO((await response.arrayBuffer()).to_py())
+                bytes = fp.read()
+                with open(path, "wb") as fp:
+                    fp.write(bytes)
+            except Exception:
+                print("Could not load dataset")
 
         if os.path.isfile(path):
             with np.load(path, allow_pickle=True) as f:

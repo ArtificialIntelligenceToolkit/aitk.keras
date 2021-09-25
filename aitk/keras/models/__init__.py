@@ -8,9 +8,9 @@
 #
 # **************************************************************
 
-from aitk.keras.layers import InputLayer, Activation
-from aitk.keras.losses import MeanSquaredError, CrossEntropy
-from aitk.keras.initializers import OptimizerInitializer
+from ..layers import Input, Activation
+from ..losses import MeanSquaredError, CrossEntropy
+from ..initializers import OptimizerInitializer
 
 import numpy as np
 import numbers
@@ -32,20 +32,33 @@ class Model():
         self.layer_map = {}
         self.step = 0
         # Build a model graph from inputs to outputs:
-        if inputs is not None:
-            # FIXME: get paths between all inputs and outputs
-            # Don't add items already in layers
-            while True:
-                # FIXME: add graph
-                if isinstance(inputs, (list, tuple)):
-                    for input in inputs:
-                        self._add(input)
+        if inputs is not None and outputs is not None:
+            if not isinstance(outputs, (list, tuple)):
+                outputs = [outputs]
+            queue = [] if inputs is None else inputs
+            if not isinstance(queue, (list, tuple)):
+                queue = [queue]
+            while len(queue) > 0:
+                layer = queue.pop(0)
+                if layer not in self.layers:
+                    if layer.name in self.layer_map:
+                        raise AttributeError("duplicate layer name: '%s'" % layer.name)
+                    self.layers.append(layer)
+                    self.layer_map[layer.name] = layer
+                if layer in outputs:
+                    # Make sure no more layers:
+                    layer.output_layers = []
                 else:
-                    self._add(inputs)
-                # FIXME: using only one input; need to make graph
-                if inputs == outputs:
-                    break
-                inputs = inputs.output_layers[0]
+                    queue.extend(layer.output_layers)
+
+    def connect(self, in_layer, out_layer):
+        """
+        Connect first layer to second layer.
+        """
+        if in_layer not in out_layer.input_layers:
+            out_layer.input_layers.append(in_layer)
+        if out_layer not in in_layer.output_layers:
+            in_layer.output_layers.append(out_layer)
 
     def make_name(self, name):
         if name is None:
@@ -80,8 +93,10 @@ class Model():
         print("_" * 65)
 
     def compile(self, optimizer, loss):
+        self._input_layers = [layer for layer in self.layers if len(layer.input_layers) == 0]
+        self._output_layers = [layer for layer in self.layers if len(layer.output_layers) == 0]
         for layer in self.layers:
-            if not isinstance(layer, InputLayer):
+            if not isinstance(layer, Input):
                 layer.optimizer = OptimizerInitializer(optimizer)()
                 loss_function = LOSS_FUNCTIONS[loss]
                 self.loss_function = loss_function()
@@ -189,7 +204,7 @@ class Model():
         )
 
         for layer in reversed(self.layers):
-            if not isinstance(layer, InputLayer):
+            if not isinstance(layer, Input):
                 dY_pred = layer.backward(dY_pred)
 
         batch_loss = self.loss_function(targets, outputs)
@@ -201,40 +216,14 @@ class Model():
 
     def update(self, batch_loss):
         for layer in reversed(self.layers):
-            if not isinstance(layer, InputLayer):
+            if not isinstance(layer, Input):
                 layer.update(batch_loss)
         self.flush_gradients()
-
-    def _add(self, layer):
-        if layer.name in self.layer_map:
-            raise AttributeError("duplicate layer name: '%s'" % layer.name)
-        self.layer_map[layer.name] = layer
-        if len(self.layers) == 0:
-            if isinstance(layer, InputLayer):
-                self.layers.append(layer)
-            else:
-                input_layer = InputLayer(input_shape=layer.input_shape)
-                self.layers.append(input_layer)
-                self.layers.append(layer)
-                layer.add_input_layer(input_layer)
-        elif isinstance(layer, Activation):
-            # FIXME: is this how to handle activations?
-            self.layers[-1].act_fn = layer.activation
-        else:
-            # FIXME: only for sequence
-            layer.add_input_layer(self.layers[-1])
-            self.layers.append(layer)
-
-    def get_output_layers(self):
-        return [layer for layer in self.layers if len(layer.output_layers) == 0]
-
-    def get_input_layers(self):
-        return [layer for layer in self.layers if len(layer.input_layers) == 0]
 
     def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
         results = []
-        for layer in self.get_output_layers():
+        for layer in self._output_layers:
             results.append(self._predict_to(inputs, layer, retain_derived=retain_derived))
         if len(results) == 1:
             return results[0]
@@ -242,7 +231,7 @@ class Model():
             return results
 
     def _predict_to(self, inputs, layer, retain_derived=False, cache={}):
-        if isinstance(layer, InputLayer):
+        if isinstance(layer, Input):
             return inputs
 
         results = []
@@ -261,4 +250,21 @@ class Sequential(Model):
         super().__init__(name=name)
 
     def add(self, layer):
-        return self._add(layer)
+        if layer.name in self.layer_map:
+            raise AttributeError("duplicate layer name: '%s'" % layer.name)
+        self.layer_map[layer.name] = layer
+        if len(self.layers) == 0:
+            if isinstance(layer, Input):
+                self.layers.append(layer)
+            else:
+                input_layer = Input(input_shape=layer.input_shape)
+                self.connect(input_layer, layer)
+                self.layers.append(input_layer)
+                self.layers.append(layer)
+        elif isinstance(layer, Activation):
+            self.layers[-1].act_fn = layer.activation
+        else:
+            input_layer = self.layers[-1]
+            self.connect(input_layer, layer)
+            self.layers.append(layer)
+
