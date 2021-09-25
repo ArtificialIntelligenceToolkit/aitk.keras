@@ -58,8 +58,13 @@ class LayerBase(ABC):
         super().__init__()
 
     def __call__(self, input_layer):
-        input_layer.output_layers.append(self)
-        self.input_layers.append(input_layer)
+        if isinstance(input_layer, (list, tuple)):
+            for layer in input_layer:
+                layer.output_layers.append(self)
+                self.input_layers.append(layer)
+        else:
+            input_layer.output_layers.append(self)
+            self.input_layers.append(input_layer)
         return self
 
     def __str__(self):
@@ -965,6 +970,76 @@ class Flatten(LayerBase):
         in_dims = self.derived_variables["in_dims"]
         out = [dy.reshape(*dims) for dy, dims in zip(dLdy, in_dims)]
         return out[0] if len(dLdy) == 1 else out
+
+class Concatenate(LayerBase):
+    def __init__(self, name=None):
+        """
+        Concatenate a list of input layers into one.
+        """  # noqa: E501
+        super().__init__(name=name)
+
+        self._init_params()
+
+    def _init_params(self):
+        self.X = []
+        self.gradients = {}
+        self.parameters = {}
+        self.derived_variables = {}
+
+    @property
+    def hyperparameters(self):
+        """Return a dictionary containing the layer hyperparameters."""
+        return {
+            "layer": "Concatenate",
+            "optimizer": {
+                "cache": self.optimizer.cache,
+                "hyperparameters": self.optimizer.hyperparameters,
+            },
+        }
+
+    def forward(self, X, retain_derived=True):
+        r"""
+        Compute the layer output on a single minibatch.
+
+        Parameters
+        ----------
+        X : :py:class:`ndarray <numpy.ndarray>`
+            Input volume to flatten.
+        retain_derived : bool
+            Whether to retain the variables calculated during the forward pass
+            for use later during backprop. If False, this suggests the layer
+            will not be expected to backprop through wrt. this input. Default
+            is True.
+
+        Returns
+        -------
+        Y :
+        """
+        print("Concatenate.forward(): in:", X)
+        result = np.concatenate(X, -1)
+        self.n_out = result.shape[1:]
+        self.n_in = [layer.n_out for layer in self.input_layers]
+        print("Concatenate.forward(): out:", result)
+        return result
+
+    def backward(self, dLdy, retain_grads=True):
+        r"""
+        Backprop from layer outputs to inputs.
+
+        Parameters
+        ----------
+        dLdY : :py:class:`ndarray <numpy.ndarray>` of shape `(*out_dims)`
+            The gradient of the loss wrt. the layer output `Y`.
+        retain_grads : bool
+            Whether to include the intermediate parameter gradients computed
+            during the backward pass in the final parameter update. Default is
+            True.
+
+        Returns
+        -------
+        dX :
+        """  # noqa: E501
+        return dLdy
 
 
 #######################################################################

@@ -76,6 +76,20 @@ def build_model_tf_multiple_inputs(optimizer="adam", loss="mse"):
     model.compile(optimizer=optimizer, loss=loss)
     return model
 
+def build_model_aitk_multiple_inputs(optimizer="adam", loss="mse"):
+    from aitk.keras.layers import Input, Dense, Activation, Concatenate
+    from aitk.keras.models import Model
+
+    input1 = Input(1, name="input1")
+    input2 = Input(1, name="input2")
+    input_cat = Concatenate()([input1, input2])
+    hidden = Dense(8, activation="tanh", name="hidden")(input_cat)
+    output = Dense(1, activation="sigmoid", name="output1")(hidden)
+
+    model = Model(inputs=[input1, input2], outputs=output)
+    model.compile(optimizer=optimizer, loss=loss)
+    return model
+
 def build_model_tf_multiple_both(optimizer="adam", loss="mse"):
     from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
     from tensorflow.keras.models import Model
@@ -226,9 +240,30 @@ def test_multiple_outputs():
                 for item_tf, item_aitk in zip(row_tf, row_aitk):
                     assert abs(item_tf - item_aitk) < 0.1
 
-        # Need to fix backward
         model_tf.fit(inputs1, targets2, epochs=1)
         model_aitk.fit(inputs1, targets2, epochs=1)
+
+def test_multiple_inputs():
+    model_tf = build_model_tf_multiple_inputs("adam", "mse")
+    tf_weights = model_tf.get_weights()
+
+    model_aitk = build_model_aitk_multiple_inputs("adam", "mse")
+    model_aitk.set_weights(tf_weights)
+
+    for i in range(10):
+        outputs_tf = model_tf.predict(inputs2)
+        # FIXME:
+        # Layers need to format n_in, n_out based on what comes in
+        # not a preconceived standalone idea
+        outputs_aitk = model_aitk.predict(inputs2)
+
+        for out_tf, out_aitk in zip(outputs_tf, outputs_aitk):
+            for item_tf, item_aitk in zip(out_tf, out_aitk):
+                assert abs(item_tf - item_aitk) < 0.1
+
+        #model_tf.fit(inputs2, targets2, epochs=1)
+        # FIXME: backward
+        #model_aitk.fit(inputs2, targets2, epochs=1)
 
 def build_topological_sort():
     from aitk.keras.layers import Input, Dense, Activation
