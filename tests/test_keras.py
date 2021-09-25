@@ -227,8 +227,8 @@ def test_multiple_outputs():
                     assert abs(item_tf - item_aitk) < 0.1
 
         # Need to fix backward
-        #model_tf.fit(inputs, targets2, epochs=1)
-        #model_aitk.fit(inputs, targets2, epochs=1)
+        model_tf.fit(inputs1, targets2, epochs=1)
+        model_aitk.fit(inputs1, targets2, epochs=1)
 
 def build_topological_sort():
     from aitk.keras.layers import Input, Dense, Activation
@@ -253,6 +253,8 @@ def build_topological_sort():
     out2 = o2(h7)
 
     model = Model(inputs=[i1, i2], outputs=[out1, out2])
+    # FIXME: layers with multiple inputs need proper
+    # initialized parameters.
     #model.compile(optimizer="adam", loss="mse") # fix forward
     return model
 

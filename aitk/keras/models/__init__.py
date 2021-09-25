@@ -120,13 +120,38 @@ class Model():
                 loss_function = LOSS_FUNCTIONS[loss]
                 self.loss_function = loss_function()
         # now, let's force the layers to initialize:
-        # FIXME: input layers:
-        if isinstance(self.layers[0].n_out, numbers.Number):
-            shape = (1, self.layers[0].n_out)
-        else:
-            shape = tuple([1] + list(self.layers[0].n_out))
-        inputs = np.ndarray(shape)
+        inputs = self.build_inputs()
         self.predict(inputs)
+
+    def get_layer_output_shape(self, layer, n=1):
+        """
+        Get the shape of the layer with a dataset
+        size of n.
+        """
+        if isinstance(layer.n_out, numbers.Number):
+            shape = (n, layer.n_out)
+        else:
+            shape = tuple([n] + list(layer.n_out))
+        return shape
+
+    def get_layer_output_array(self, layer):
+        """
+        Get an output array of a layer (dataset, n = 1).
+        """
+        shape = self.get_layer_output_shape(layer)
+        output = np.ndarray(shape)
+        return output
+
+    def build_inputs(self):
+        if self.sequential:
+            inputs = self.get_layer_output_array(self.layers[0])
+        else:
+            if len(self.get_input_layers()) > 1:
+                inputs = [self.get_layer_output_array(input)
+                          for input in self._input_layers]
+            else:
+                inputs = self.get_layer_output_array(self._input_layers[0])
+        return inputs
 
     def get_weights(self, flat=False):
         array = []
@@ -201,13 +226,33 @@ class Model():
 
     def enumerate_batches(self, inputs, targets, batch_size):
         current_row = 0
-        while current_row < len(inputs):
-            # if one input bank, one output bank:
-            batch_inputs = inputs[current_row:current_row + batch_size]
-            batch_targets = targets[current_row:current_row + batch_size]
-            # FIXME: either may be composed of banks
-            current_row += len(batch_inputs)
+        while (current_row * batch_size) < self.get_length_of_inputs(inputs):
+            batch_inputs = self.get_batch_inputs(
+                inputs, current_row, batch_size)
+            batch_targets = self.get_batch_targets(
+                targets, current_row, batch_size)
+            current_row += 1
             yield (batch_inputs, batch_targets)
+
+    def get_length_of_inputs(self, inputs):
+        if len(self.get_input_layers()) == 1:
+            return len(inputs)
+        else:
+            return len(inputs[0])
+
+    def get_batch_inputs(self, inputs, current_row, batch_size):
+        if len(self.get_input_layers()) == 1:
+            return inputs[current_row:current_row + batch_size]
+        else:
+            return [np.array(inputs[i][current_row:current_row + batch_size])
+                    for i in range(len(self.get_input_layers()))]
+
+    def get_batch_targets(self, targets, current_row, batch_size):
+        if len(self.get_output_layers()) == 1:
+            return targets[current_row:current_row + batch_size]
+        else:
+            return [np.array(targets[i][current_row:current_row + batch_size])
+                    for i in range(len(self.get_output_layers()))]
 
     def train_batch(self, dataset):
         inputs, targets = dataset
@@ -217,20 +262,41 @@ class Model():
 
         # Compute the derivative with respect
         # to this batch of the dataset:
-        dY_pred = self.loss_function.grad(
-            targets,
-            outputs,
-        )
+        batch_loss = 0
+        if len(self.get_output_layers()) == 1:
+            dY_pred = self.loss_function.grad(
+                targets,
+                outputs,
+            )
+            queue = [(self.get_output_layers()[0], dY_pred)]
+            while len(queue) > 0:
+                layer, dY_pred = queue.pop(0)
+                if not isinstance(layer, Input):
+                    dY_pred = layer.backward(dY_pred)
+                    for input_layer in layer.input_layers:
+                        queue.append((input_layer, dY_pred))
 
-        for layer in reversed(self.layers):
-            if not isinstance(layer, Input):
-                dY_pred = layer.backward(dY_pred)
+            batch_loss = self.loss_function(targets, outputs)
+        else:
+            for out_n in range(len(self.get_output_layers())):
+                dY_pred = self.loss_function.grad(
+                    targets[out_n],
+                    outputs[out_n],
+                )
+                queue = [(self.get_output_layers()[out_n], dY_pred)]
+                while len(queue) > 0:
+                    layer, dY_pred = queue.pop(0)
+                    if not isinstance(layer, Input):
+                        dY_pred = layer.backward(dY_pred)
+                        for input_layer in layer.input_layers:
+                            queue.append((input_layer, dY_pred))
 
-        batch_loss = self.loss_function(targets, outputs)
+                batch_loss += self.loss_function(targets[out_n], outputs[out_n])
+
+        self.update(batch_loss)
         # FIXME: compute other metrics, and log them
         # Update every layer:
         # FIXME: scale this proportional?
-        self.update(batch_loss)
         return batch_loss
 
     def update(self, batch_loss):
@@ -268,7 +334,7 @@ class Model():
         if len(results) == 1:
             return layer.forward(results[0], retain_derived=retain_derived)
         else:
-            return layer.forward(results, retain_derived=retain_derived)
+            return layer.forward(np.array(results), retain_derived=retain_derived)
 
 class Sequential(Model):
     def __init__(self, layers=None, name="sequential"):

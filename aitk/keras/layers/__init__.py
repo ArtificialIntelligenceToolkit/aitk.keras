@@ -62,6 +62,9 @@ class LayerBase(ABC):
         self.input_layers.append(input_layer)
         return self
 
+    def __str__(self):
+        return f"<{self.__class__.__name__}(name='{self.name}')>"
+
     def make_name(self, name):
         if name is None:
             class_name = self.__class__.__name__.lower()
