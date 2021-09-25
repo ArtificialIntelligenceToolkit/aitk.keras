@@ -248,11 +248,6 @@ class DotProductAttention(LayerBase):
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
             Unused.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None. Unused.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -443,11 +438,6 @@ class RBM(LayerBase):
             a single gradient update. Default is 1.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -698,11 +688,6 @@ class Add(LayerBase):
             The element-wise output nonlinearity used in computing the final
             output. If None, use the identity function :math:`f(x) = x`.
             Default is None.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
         self.act_fn = ActivationInitializer(act_fn)()
@@ -794,11 +779,6 @@ class Multiply(LayerBase):
             The element-wise output nonlinearity used in computing the final
             output. If None, use the identity function :math:`f(x) = x`.
             Default is None.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
         self.act_fn = ActivationInitializer(act_fn)()
@@ -891,11 +871,6 @@ class Flatten(LayerBase):
             The dimension of the original input to retain. Typically used for
             retaining the minibatch dimension.. If -1, flatten all dimensions.
             Default is 'first'.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -1015,11 +990,9 @@ class Concatenate(LayerBase):
         -------
         Y :
         """
-        print("Concatenate.forward(): in:", X)
         result = np.concatenate(X, -1)
         self.n_out = result.shape[1:]
         self.n_in = [layer.n_out for layer in self.input_layers]
-        print("Concatenate.forward(): out:", result)
         return result
 
     def backward(self, dLdy, retain_grads=True):
@@ -1095,11 +1068,6 @@ class BatchNorm2D(LayerBase):
         epsilon : float
             A small smoothing constant to use during computation of ``norm(X)``
             to avoid divide-by-zero errors. Default is 1e-5.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -1331,11 +1299,6 @@ class BatchNorm1D(LayerBase):
         epsilon : float
             A small smoothing constant to use during computation of ``norm(X)``
             to avoid divide-by-zero errors. Default is 1e-5.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -1524,11 +1487,6 @@ class LayerNorm2D(LayerBase):
         epsilon : float
             A small smoothing constant to use during computation of ``norm(X)``
             to avoid divide-by-zero errors. Default is 1e-5.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -1701,11 +1659,6 @@ class LayerNorm1D(LayerBase):
         epsilon : float
             A small smoothing constant to use during computation of ``norm(X)``
             to avoid divide-by-zero errors. Default is 1e-5.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -1870,11 +1823,6 @@ class Embedding(LayerBase):
             Default is None.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
         fstr = "'pool' must be either 'sum', 'mean', or None but got '{}'"
@@ -2056,11 +2004,6 @@ class Dense(LayerBase):
             use the identity function :math:`f(X) = X`. Default is None.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -2229,11 +2172,6 @@ class Softmax(LayerBase):
         dim: int
             The dimension in `X` along which the softmax will be computed.
             Default is -1.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None. Unused for this layer.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -2389,11 +2327,6 @@ class SparseEvolution(LayerBase):
             use the identity function :math:`f(X) = X`. Default is None.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
-            parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -2639,11 +2572,6 @@ class Conv1D(LayerBase):
             * (d + 1) - d]``. Default is 0.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -2920,11 +2848,6 @@ class Conv2D(LayerBase):
             * (d + 1) - d]``. Default is 0.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -3166,11 +3089,6 @@ class Pool2D(LayerBase):
             The number of rows/columns of 0's to pad the input. Default is 0.
         mode : {"max", "average"}
             The pooling function to apply.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -3361,11 +3279,6 @@ class Deconv2D(LayerBase):
             input volume. Default is 1.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -3585,11 +3498,6 @@ class RNNCell(LayerBase):
             The activation function for computing ``A[t]``. Default is `'Tanh'`.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
-            parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -3810,11 +3718,6 @@ class LSTMCell(LayerBase):
             gates. Default is `'Sigmoid'`.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
-            parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -4087,11 +3990,6 @@ class RNN(LayerBase):
             `'Tanh'`.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with default
-            parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 
@@ -4266,11 +4164,6 @@ class LSTM(LayerBase):
             gates. Default is `'Sigmoid'`.
         kernel_initializer : {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
             The weight initialization strategy. Default is `'glorot_uniform'`.
-        optimizer : str, :doc:`Optimizer <numpy_ml.neural_nets.optimizers>` object, or None
-            The optimization strategy to use when performing gradient updates
-            within the :meth:`update` method.  If None, use the :class:`SGD
-            <numpy_ml.neural_nets.optimizers.SGD>` optimizer with
-            default parameters. Default is None.
         """  # noqa: E501
         super().__init__(name=name)
 

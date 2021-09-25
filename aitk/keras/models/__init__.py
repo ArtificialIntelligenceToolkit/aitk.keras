@@ -264,6 +264,9 @@ class Model():
         # to this batch of the dataset:
         batch_loss = 0
         if len(self.get_output_layers()) == 1:
+            if len(self.get_output_layers()) > 1:
+                # strip off one layer
+                outputs = outputs[0]
             dY_pred = self.loss_function.grad(
                 targets,
                 outputs,

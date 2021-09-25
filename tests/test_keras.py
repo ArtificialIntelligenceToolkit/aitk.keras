@@ -261,9 +261,9 @@ def test_multiple_inputs():
             for item_tf, item_aitk in zip(out_tf, out_aitk):
                 assert abs(item_tf - item_aitk) < 0.1
 
-        #model_tf.fit(inputs2, targets2, epochs=1)
+        model_tf.fit(inputs2, [np.array(targets)], epochs=1)
         # FIXME: backward
-        #model_aitk.fit(inputs2, targets2, epochs=1)
+        model_aitk.fit(inputs2, [np.array(targets)], epochs=1)
 
 def build_topological_sort():
     from aitk.keras.layers import Input, Dense, Activation
