@@ -36,14 +36,18 @@ outputs = model.predict(inputs)
 model.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False)
 ```
 
-## TODO
+See the notebook directory for additional examples.
+
+See also the examples in the tests folder.
+
+## Development
 
 * implement shuffle
 * report metrics to logs/history
 * probably lots of edge cases ar broken
 * see "FIXME" items in code
 
-Additional examples in the tests. To run the tests:
+To run the tests:
 
 ```
 $ pytest -vvv tests
