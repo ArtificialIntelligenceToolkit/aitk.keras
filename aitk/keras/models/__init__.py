@@ -8,7 +8,7 @@
 #
 # **************************************************************
 
-from ..layers import Input, Activation
+from ..layers import Input, Activation, Concatenate
 from ..losses import MeanSquaredError, CrossEntropy
 from ..initializers import OptimizerInitializer
 from ..utils import topological_sort
@@ -54,6 +54,13 @@ class Model():
                     layer.output_layers = []
                 else:
                     queue.extend(layer.output_layers)
+            self.sequential = self.is_sequential()
+
+    def is_sequential(self):
+        return ((len(self.get_input_layers()) == 1) and
+                (len(self.get_output_layers()) == 1) and
+                (not any([isinstance(layer, Concatenate)
+                          for layer in self.layers])))
 
     def get_input_layers(self):
         if self._input_layers is None:
@@ -169,6 +176,20 @@ class Model():
                     array.extend(layer.get_weights())
         return array
 
+    def copy_weights(self, model):
+        """
+        Copy the weights from another model by layer name.
+        """
+        for layer in model.layers:
+            weights = layer.get_weights()
+            self.layer_map[layer.name].set_weights(weights)
+
+    def get_weights_by_name(self):
+        """
+        Copy the weights from another model by layer name.
+        """
+        return {layer.name: layer.get_weights() for layer in self.layers}
+
     def set_weights(self, weights):
         """
         Set the weights in a network.
@@ -217,7 +238,7 @@ class Model():
             for batch_data in self.enumerate_batches(inputs, targets, batch_size):
                 batch_loss += self.train_batch(batch_data)
                 self.step += 1
-            #print(self.step, batch_loss)
+            print(self.step, batch_loss)
 
     def flush_gradients(self):
         for layer in self.layers:
@@ -248,7 +269,8 @@ class Model():
                     for i in range(len(self.get_input_layers()))]
 
     def get_batch_targets(self, targets, current_row, batch_size):
-        if len(self.get_output_layers()) == 1:
+        if not isinstance(targets, (list, tuple)):
+            # Numpy, one bank:
             return targets[current_row:current_row + batch_size]
         else:
             return [np.array(targets[i][current_row:current_row + batch_size])
@@ -263,10 +285,7 @@ class Model():
         # Compute the derivative with respect
         # to this batch of the dataset:
         batch_loss = 0
-        if len(self.get_output_layers()) == 1:
-            if len(self.get_output_layers()) > 1:
-                # strip off one layer
-                outputs = outputs[0]
+        if self.sequential:
             dY_pred = self.loss_function.grad(
                 targets,
                 outputs,
@@ -297,9 +316,6 @@ class Model():
                 batch_loss += self.loss_function(targets[out_n], outputs[out_n])
 
         self.update(batch_loss)
-        # FIXME: compute other metrics, and log them
-        # Update every layer:
-        # FIXME: scale this proportional?
         return batch_loss
 
     def update(self, batch_loss):
@@ -319,25 +335,22 @@ class Model():
                 cache = {self._input_layers[i].name: input for i, input in enumerate(inputs)}
             else:
                 cache = {self._input_layers[0].name: inputs}
-        # Now we work backwards from ouputs:
+
+        # Propagate in topological order:
+        for layer in topological_sort(self.get_input_layers()):
+            if not isinstance(layer, Input):
+                inputs = [cache[in_layer.name] for in_layer in layer.input_layers]
+                if len(inputs) == 1:
+                    cache[layer.name] = layer.forward(inputs[0], retain_derived=retain_derived)
+                else:
+                    cache[layer.name] = layer.forward(inputs, retain_derived=retain_derived)
+
         for layer in self.get_output_layers():
-            results.append(self._predict_to(layer, retain_derived, cache))
-        if len(results) == 1:
+            results.append(cache[layer.name])
+        if self.sequential:
             return results[0]
         else:
             return results
-
-    def _predict_to(self, layer, retain_derived=False, cache={}):
-        results = []
-        for input_layer in layer.input_layers:
-            if input_layer.name in cache:
-                results.append(cache[input_layer.name])
-            else:
-                results.append(self._predict_to(input_layer, retain_derived, cache))
-        if len(results) == 1:
-            return layer.forward(results[0], retain_derived=retain_derived)
-        else:
-            return layer.forward(np.array(results), retain_derived=retain_derived)
 
 class Sequential(Model):
     def __init__(self, layers=None, name="sequential"):

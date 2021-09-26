@@ -7,7 +7,7 @@ def topological_sort(layers):
     """
     stack = []
     visited = set()
-    for layer in layers:
+    for layer in reversed(layers):
         if layer not in visited:
             visit_node(layer, stack, visited)
     return reversed(stack)
