@@ -319,7 +319,7 @@ class Model():
         return batch_loss
 
     def update(self, batch_loss):
-        for layer in reversed(self.layers):
+        for layer in self.layers:
             if not isinstance(layer, Input):
                 layer.update(batch_loss)
         self.flush_gradients()
