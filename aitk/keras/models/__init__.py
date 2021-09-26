@@ -238,7 +238,7 @@ class Model():
             for batch_data in self.enumerate_batches(inputs, targets, batch_size):
                 batch_loss += self.train_batch(batch_data)
                 self.step += 1
-            print(self.step, batch_loss)
+            print(epoch, self.step, batch_loss)
 
     def flush_gradients(self):
         for layer in self.layers:
