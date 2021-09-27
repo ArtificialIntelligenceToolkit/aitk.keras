@@ -1,7 +1,7 @@
 aitk.keras
 ==========
 
-An implementation of the main Keras API with of layers in numpy.
+An implementation of the main Keras API with the layers in numpy.
 
 *UNDER DEVELOPMENT*
 
