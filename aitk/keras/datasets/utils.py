@@ -21,6 +21,7 @@ import functools
 import hashlib
 import multiprocessing.dummy
 import os
+import io
 import pathlib
 import queue
 import random
@@ -37,6 +38,20 @@ from six.moves.urllib.parse import urlsplit
 import numpy as np
 from six.moves.urllib.request import urlopen
 from urllib.request import urlretrieve
+
+await get_file_async(origin_folder, file_name):
+    try:
+        print("Downloading data from %s" % (origin_folder + file_name))
+        import js
+        response = await js.fetch(origin_folder + file_name)
+        fp = io.BytesIO((await response.arrayBuffer()).to_py())
+        bytes = fp.read()
+        with open(path, "wb") as fp:
+            fp.write(bytes)
+    except Exception:
+        print("Could not load dataset")
+        return
+    return fp
 
 def path_to_string(path):
   """Convert `PathLike` objects to their string representation.

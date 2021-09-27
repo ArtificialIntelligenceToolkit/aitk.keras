@@ -16,7 +16,7 @@
 
 import numpy as np
 
-from .utils import get_file
+from .utils import get_file, get_file_async
 
 
 def load_data(path='boston_housing.npz', test_split=0.2, seed=113):

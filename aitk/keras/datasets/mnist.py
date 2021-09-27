@@ -16,9 +16,8 @@
 
 import numpy as np
 import os
-import io
 
-from .utils import get_file
+from .utils import get_file, get_file_async
 
 origin_folders = [
     ('https://storage.googleapis.com/tensorflow/tf-keras-datasets/', '731c5ac602752760c8e48fbffcf8c3b850d9dc2a2aedcf2cc48468fc17b673d1'),
@@ -86,6 +85,7 @@ def load_data(path='mnist.npz'):
                 x_test, y_test = f['x_test'], f['y_test']
             return (x_train, y_train), (x_test, y_test)
 
+
 async def load_data_async(path='mnist.npz'):
     """Loads the MNIST dataset.
 
@@ -134,16 +134,7 @@ async def load_data_async(path='mnist.npz'):
     """
     for origin_folder, file_hash in origin_folders:
         if not os.path.isfile(path):
-            try:
-                print("Downloading data from %s" % (origin_folder + 'mnist.npz'))
-                import js
-                response = await js.fetch(origin_folder + 'mnist.npz')
-                fp = io.BytesIO((await response.arrayBuffer()).to_py())
-                bytes = fp.read()
-                with open(path, "wb") as fp:
-                    fp.write(bytes)
-            except Exception:
-                print("Could not load dataset")
+            await get_file_async(origin_folder, path)
 
         if os.path.isfile(path):
             with np.load(path, allow_pickle=True) as f:
