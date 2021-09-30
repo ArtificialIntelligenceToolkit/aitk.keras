@@ -97,7 +97,10 @@ class Model():
             return name
 
     def summary(self):
-        print(f'Model: "{self.name}"')
+        if self._input_layers is None:
+            print(f'Model: "{self.name}" (uncompiled)')
+        else:
+            print(f'Model: "{self.name}"')
         print('_' * 65)
         print("Layer (type)                 Output Shape              Param #")
         print("=" * 65)

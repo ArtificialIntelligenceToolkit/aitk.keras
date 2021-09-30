@@ -873,6 +873,8 @@ class Flatten(LayerBase):
             Default is 'first'.
         """  # noqa: E501
         super().__init__(name=name)
+        self.n_out = 0
+        self.n_in = []
 
         self.keep_dim = keep_dim
         self._init_params()
@@ -915,11 +917,13 @@ class Flatten(LayerBase):
             Flattened output. If `keep_dim` is `'first'`, `X` is reshaped to
             ``(X.shape[0], -1)``, otherwise ``(-1, X.shape[0])``.
         """
+        self.n_in = X.shape
         if retain_derived:
             self.derived_variables["in_dims"].append(X.shape)
         if self.keep_dim == -1:
             return X.flatten().reshape(1, -1)
         rs = (X.shape[0], -1) if self.keep_dim == "first" else (-1, X.shape[-1])
+        self.n_out = rs
         return X.reshape(*rs)
 
     def backward(self, dLdy, retain_grads=True):
@@ -952,6 +956,8 @@ class Concatenate(LayerBase):
         Concatenate a list of input layers into one.
         """  # noqa: E501
         super().__init__(name=name)
+        self.n_out = 0
+        self.n_in = []
 
         self._init_params()
 
