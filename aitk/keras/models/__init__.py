@@ -237,6 +237,8 @@ class Model():
         inputs = np.array(inputs, dtype=float)
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
+        for callback in callbacks:
+            callback.on_train_begin()
         for epoch in range(epochs):
             for callback in callbacks:
                 callback.on_epoch_begin(epoch, {"step": self.step})
@@ -248,6 +250,8 @@ class Model():
             for callback in callbacks:
                 callback.on_epoch_end(epoch, {"batch_loss": batch_loss, "step": self.step, "loss": batch_loss})
             print(epoch + 1, self.step, batch_loss)
+        for callback in callbacks:
+            callback.on_train_end({"loss": batch_loss})
 
     def flush_gradients(self):
         for layer in self.layers:
