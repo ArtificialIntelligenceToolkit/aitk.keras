@@ -233,15 +233,21 @@ class Model():
         # FIXME: use callbacks
         # FIXME: use shuffle
         # FIXME: log metrics
+        callbacks = [] if callbacks is None else callbacks
         inputs = np.array(inputs, dtype=float)
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
         for epoch in range(epochs):
+            for callback in callbacks:
+                callback.on_epoch_begin(epoch, {"step": self.step})
             batch_loss = 0
-            for batch_data in self.enumerate_batches(inputs, targets, batch_size):
-                batch_loss += self.train_batch(batch_data)
+            for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size):
+                batch_loss += self.train_batch(batch_data, batch, length, callbacks)
                 self.step += 1
-            print(epoch, self.step, batch_loss)
+            # FIXME: average batch loss?
+            for callback in callbacks:
+                callback.on_epoch_end(epoch, {"batch_loss": batch_loss, "step": self.step, "loss": batch_loss})
+            print(epoch + 1, self.step, batch_loss)
 
     def flush_gradients(self):
         for layer in self.layers:
@@ -250,13 +256,15 @@ class Model():
 
     def enumerate_batches(self, inputs, targets, batch_size):
         current_row = 0
+        batch = 0
         while (current_row * batch_size) < self.get_length_of_inputs(inputs):
             batch_inputs = self.get_batch_inputs(
                 inputs, current_row, batch_size)
             batch_targets = self.get_batch_targets(
                 targets, current_row, batch_size)
             current_row += 1
-            yield (batch_inputs, batch_targets)
+            yield batch, self.get_length_of_inputs(batch_inputs), (batch_inputs, batch_targets)
+            batch += 1
 
     def get_length_of_inputs(self, inputs):
         if len(self.get_input_layers()) == 1:
@@ -279,7 +287,7 @@ class Model():
             return [np.array(targets[i][current_row:current_row + batch_size])
                     for i in range(len(self.get_output_layers()))]
 
-    def train_batch(self, dataset):
+    def train_batch(self, dataset, batch, length, callbacks):
         inputs, targets = dataset
         # Use predict to forward the activations, saving
         # needed information:
@@ -288,6 +296,8 @@ class Model():
         # Compute the derivative with respect
         # to this batch of the dataset:
         batch_loss = 0
+        for callback in callbacks:
+            callback.on_train_batch_begin(batch)
         if self.sequential:
             dY_pred = self.loss_function.grad(
                 targets,
@@ -318,6 +328,8 @@ class Model():
 
                 batch_loss += self.loss_function(targets[out_n], outputs[out_n])
 
+        for callback in callbacks:
+            callback.on_train_batch_end(batch, {"batch_loss": batch_loss})
         self.update(batch_loss)
         return batch_loss
 

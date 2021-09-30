@@ -418,3 +418,13 @@ def test_diff_functional():
     out2 = model2.predict(inputs)
 
     compare_output(out1, out2)
+
+def test_callbacks():
+    model = build_model("aitk")
+    from aitk.keras.callbacks import Callback
+
+    class MyCallback(Callback):
+        def on_epoch_end(self, epoch, logs=None):
+            print("epoch", epoch)
+
+    model.fit(inputs, targets, callbacks=[MyCallback()])
