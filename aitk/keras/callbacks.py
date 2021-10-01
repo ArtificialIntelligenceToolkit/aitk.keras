@@ -211,3 +211,15 @@ class Callback:
             logs: Dict. Currently no data is passed to this argument for this method
                 but that may change in the future.
         """
+
+class History(Callback):
+    def __init__(self):
+        super().__init__()
+        self.history = {}
+
+    def on_epoch_end(self, epoch, logs=None):
+        if logs:
+            for metric in logs:
+                if metric not in self.history:
+                    self.history[metric] = []
+                self.history[metric].append(logs[metric])

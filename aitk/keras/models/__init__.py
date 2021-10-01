@@ -11,9 +11,11 @@
 from ..layers import Input, Activation, Concatenate
 from ..losses import MeanSquaredError, CrossEntropy
 from ..initializers import OptimizerInitializer
+from ..callbacks import History
 from ..utils import topological_sort
 
 import numpy as np
+import math
 import numbers
 import functools
 import operator
@@ -29,6 +31,7 @@ NAME_CACHE = {}
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
         self.sequential = False
+        self.history = History()
         self.name = self.make_name(name)
         self.layers = []
         self.layer_map = {}
@@ -121,7 +124,7 @@ class Model():
         print(f"Non-trainable params: {other_params:,}")
         print("_" * 65)
 
-    def compile(self, optimizer, loss):
+    def compile(self, optimizer, loss, metrics=None):
         self._input_layers = [layer for layer in self.layers if len(layer.input_layers) == 0]
         self._output_layers = [layer for layer in self.layers if len(layer.output_layers) == 0]
         for layer in self.layers:
@@ -129,6 +132,7 @@ class Model():
                 layer.optimizer = OptimizerInitializer(optimizer)()
                 loss_function = LOSS_FUNCTIONS[loss]
                 self.loss_function = loss_function()
+        self.metrics = metrics if metrics is not None else []
         # now, let's force the layers to initialize:
         inputs = self.build_inputs()
         self.predict(inputs)
@@ -229,29 +233,44 @@ class Model():
 
     def fit(self, inputs, targets, batch_size=32, epochs=1, verbose="auto", callbacks=None,
             shuffle=True):
-        # FIXME: use verbose
-        # FIXME: use callbacks
         # FIXME: use shuffle
-        # FIXME: log metrics
+        verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
+        callbacks.append(self.history)
         inputs = np.array(inputs, dtype=float)
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
         for callback in callbacks:
             callback.on_train_begin()
         for epoch in range(epochs):
+            for metric in self.metrics:
+                metric.reset_state()
+
             for callback in callbacks:
                 callback.on_epoch_begin(epoch, {"step": self.step})
-            batch_loss = 0
+            loss = 0
+            total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size):
-                batch_loss += self.train_batch(batch_data, batch, length, callbacks)
-                self.step += 1
-            # FIXME: average batch loss?
+                loss += self.train_batch(batch_data, batch, length, callbacks)
+                self.step += length
+                if verbose:
+                    print(f"Epoch {epoch+1}/{epochs}")
+                    print(f"{batch+1}/{total_batches} [==============================] - Xs time/step - loss: {loss}")
+            logs = {
+                "loss": loss,
+                "step": self.step,
+            }
+            for metric in self.metrics:
+                logs[metric.name] = metric.result()
+
             for callback in callbacks:
-                callback.on_epoch_end(epoch, {"batch_loss": batch_loss, "step": self.step, "loss": batch_loss})
-            print(epoch + 1, self.step, batch_loss)
+                callback.on_epoch_end(
+                    epoch,
+                    logs
+                )
         for callback in callbacks:
-            callback.on_train_end({"loss": batch_loss})
+            callback.on_train_end({"loss": loss})
+        return self.history
 
     def flush_gradients(self):
         for layer in self.layers:
@@ -296,7 +315,6 @@ class Model():
         # Use predict to forward the activations, saving
         # needed information:
         outputs = self.predict(inputs, True)
-
         # Compute the derivative with respect
         # to this batch of the dataset:
         batch_loss = 0
@@ -316,6 +334,8 @@ class Model():
                         queue.append((input_layer, dY_pred))
 
             batch_loss = self.loss_function(targets, outputs)
+            for metric in self.metrics:
+                metric.update_state(targets, outputs)
         else:
             for out_n in range(len(self.get_output_layers())):
                 dY_pred = self.loss_function.grad(
@@ -331,6 +351,8 @@ class Model():
                             queue.append((input_layer, dY_pred))
 
                 batch_loss += self.loss_function(targets[out_n], outputs[out_n])
+                for metric in self.metrics:
+                    metric.update_state(targets[out_n], outputs[out_n])
 
         for callback in callbacks:
             callback.on_train_batch_end(batch, {"batch_loss": batch_loss})
