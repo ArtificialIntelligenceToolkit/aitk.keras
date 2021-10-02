@@ -33,6 +33,7 @@ NAME_CACHE = {}
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
         self.stop_training = False
+        self.built = False
         self.sequential = False
         self.history = History()
         self.name = self.make_name(name)
@@ -61,6 +62,7 @@ class Model():
                 else:
                     queue.extend(layer.output_layers)
             self.sequential = self.is_sequential()
+            self.build()
 
     def is_sequential(self):
         return ((len(self.get_input_layers()) == 1) and
@@ -103,8 +105,8 @@ class Model():
             return name
 
     def summary(self):
-        if self._input_layers is None:
-            print(f'Model: "{self.name}" (uncompiled)')
+        if not self.built:
+            print(f'Model: "{self.name}" (unbuilt)')
         else:
             print(f'Model: "{self.name}"')
         print('_' * 65)
@@ -116,24 +118,33 @@ class Model():
         for i, layer in enumerate(topological_sort(self.get_input_layers())):
             layer_name = ("%s (%s)" % (layer.name, layer.__class__.__name__))[:25]
             output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
-            if self._input_layers is not None:
+            if self.built:
                 parameters = sum([np.prod(item.shape) for item in layer.parameters.values() if item is not None])
                 total_parameters += parameters
                 print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {parameters:>20,}")
             else:
-                print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {'(uncompiled)':>20}")
+                print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {'(unbuilt)':>20}")
             if i != len(self.layers) - 1:
                 print("_" * 65)
         print("=" * 65)
-        if self._input_layers is not None:
+        if self.built:
             print(f"Total params: {total_parameters:,}")
             print(f"Trainable params: {total_parameters + other_params:,}")
             print(f"Non-trainable params: {other_params:,}")
         print("_" * 65)
 
-    def compile(self, optimizer, loss, metrics=None):
+    def build(self):
         self._input_layers = [layer for layer in self.layers if len(layer.input_layers) == 0]
         self._output_layers = [layer for layer in self.layers if len(layer.output_layers) == 0]
+        for layer in self.layers:
+            if not isinstance(layer, Input):
+                self.is_initialized = False
+        # now, let's force the layers to initialize:
+        inputs = self.build_inputs()
+        self.predict(inputs)
+        self.built = True
+
+    def compile(self, optimizer, loss, metrics=None):
         for layer in self.layers:
             if not isinstance(layer, Input):
                 self.is_initialized = False
@@ -141,9 +152,7 @@ class Model():
                 loss_function = LOSS_FUNCTIONS[loss]
                 self.loss_function = loss_function()
         self.metrics = metrics if metrics is not None else []
-        # now, let's force the layers to initialize:
-        inputs = self.build_inputs()
-        self.predict(inputs)
+        self.build()
 
     def get_layer_output_shape(self, layer, n=1):
         """
@@ -165,6 +174,9 @@ class Model():
         return output
 
     def build_inputs(self):
+        """
+        Build a dataset of dummy inputs.
+        """
         if self.sequential:
             inputs = self.get_layer_output_array(self.layers[0])
         else:
@@ -176,6 +188,9 @@ class Model():
         return inputs
 
     def get_weights(self, flat=False):
+        """
+        Get the weights from the model.
+        """
         array = []
         if flat:
             for layer in self.layers:
@@ -240,6 +255,9 @@ class Model():
                     i += count
 
     def format_time(self, seconds):
+        """
+        Format time for easy human reading.
+        """
         if seconds > 1:
             return f"{seconds:.0f}s"
         elif seconds * 1000 > 1:
@@ -248,7 +266,10 @@ class Model():
             return f"{seconds * 1000000:.0f}µs"
 
     def fit(self, inputs, targets, batch_size=32, epochs=1, verbose="auto", callbacks=None,
-            initial_epoch=None, shuffle=True):
+            initial_epoch=0, shuffle=True):
+        """
+        The training loop for all models.
+        """
         self.stop_training = False
         verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
@@ -464,6 +485,7 @@ class Sequential(Model):
         if layers is not None:
             for layer in layers:
                 self.add(layer)
+            self.build()
 
     def add(self, layer):
         if layer.name in self.layer_map:
@@ -483,3 +505,4 @@ class Sequential(Model):
             input_layer = self.layers[-1]
             self.connect(input_layer, layer)
             self.layers.append(layer)
+        self.build()
