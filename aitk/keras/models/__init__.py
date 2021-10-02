@@ -19,6 +19,7 @@ import math
 import numbers
 import functools
 import operator
+from collections import defaultdict
 
 LOSS_FUNCTIONS = {
     "mse": MeanSquaredError,
@@ -245,16 +246,27 @@ class Model():
             callback.set_model(self)
             callback.on_train_begin()
         for epoch in range(epochs):
+            epoch_metric_values = {}
+            epoch_metric_counts = {}
             for metric in self.metrics:
                 if hasattr(metric, "reset_state"):
                     metric.reset_state()
+                else:
+                    epoch_metric_values[metric.__name__] = 0
+                    epoch_metric_counts[metric.__name__] = 0
 
             for callback in callbacks:
                 callback.on_epoch_begin(epoch)
+
             loss = 0
             total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size):
-                loss += self.train_batch(batch_data, batch, length, callbacks)
+                batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, callbacks)
+                loss += batch_loss
+                for metric in batch_metric_values:
+                    # Need to account for uneven batch sizes:
+                    epoch_metric_values[metric] += batch_metric_values[metric] * length
+                    epoch_metric_counts[metric] += length
                 self.step += length
                 if verbose:
                     print(f"Epoch {epoch+1}/{epochs}")
@@ -266,12 +278,8 @@ class Model():
                 if hasattr(metric, "result"):
                     logs[metric.name] = metric.result()
                 else:
-                    # Fixme: handle functional metrics at batch level
-                    # and pass reults here
-                    # FIXME: which is more correct: the metric at batch leve
-                    # or after all of the weights have changed?
-                    outputs = self.predict(inputs)
-                    logs[str(metric.__name__)] = metric(targets, outputs)
+                    if metric.__name__ in epoch_metric_values:
+                        logs[metric.__name__] = epoch_metric_values[metric.__name__] / epoch_metric_counts[metric.__name__]
             for callback in callbacks:
                 callback.on_epoch_end(
                     epoch,
@@ -327,6 +335,7 @@ class Model():
         # Compute the derivative with respect
         # to this batch of the dataset:
         batch_loss = 0
+        batch_metric_values = defaultdict(int)
         for callback in callbacks:
             callback.on_train_batch_begin(batch)
         results = 0
@@ -347,6 +356,8 @@ class Model():
             for metric in self.metrics:
                 if hasattr(metric, "update_state"):
                     metric.update_state(targets, outputs)
+                else:
+                    batch_metric_values[metric.__name__] = metric(targets, outputs)
         else:
             for out_n in range(len(self.get_output_layers())):
                 dY_pred = self.loss_function.grad(
@@ -365,11 +376,15 @@ class Model():
                 for metric in self.metrics:
                     if hasattr(metric, "update_state"):
                         metric.update_state(targets[out_n], outputs[out_n])
+                    else:
+                        batch_metric_values[metric.__name__] += metric(targets, outputs)
 
         for callback in callbacks:
-            callback.on_train_batch_end(batch, {"batch_loss": batch_loss})
+            logs = {"batch_loss": batch_loss}
+            logs.update(batch_metric_values)
+            callback.on_train_batch_end(batch, logs)
         self.update(batch_loss)
-        return batch_loss
+        return batch_loss, batch_metric_values
 
     def update(self, batch_loss):
         for layer in self.layers:

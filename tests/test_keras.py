@@ -15,7 +15,7 @@ targets2 = [
 
 MAX_DIFF = 0.001
 
-def build_model(framework, optimizer="adam", loss="mse"):
+def build_model(framework, optimizer="adam", loss="mse", metrics=None):
     if framework == "tf":
         from tensorflow.keras.layers import InputLayer, Dense, Activation
         from tensorflow.keras.models import Sequential
@@ -27,7 +27,7 @@ def build_model(framework, optimizer="adam", loss="mse"):
     model.add(InputLayer(2, name="input"))
     model.add(Dense(8, activation="tanh", name="hidden"))
     model.add(Dense(1, activation="sigmoid", name="output"))
-    model.compile(optimizer=optimizer, loss=loss)
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
     return model
 
 def build_model_functional(framework, optimizer="adam", loss="mse"):
@@ -428,3 +428,20 @@ def test_callbacks():
             print("epoch", epoch)
 
     model.fit(inputs, targets, callbacks=[MyCallback()])
+
+def test_metrics():
+    from aitk.keras.metrics import tolerance_accuracy, ToleranceAccuracy
+    from aitk.keras.optimizers import SGD
+
+    tolerance_accuracy_class = ToleranceAccuracy(.2)
+    tolerance_accuracy_class.name = "tolerance_accuracy_class"
+    tolerance_accuracy.tolerance = 0.2
+
+    model = build_model("aitk",
+                        optimizer=SGD(learning_rate=0.1, momentum=0.9),
+                        metrics=[tolerance_accuracy_class, tolerance_accuracy])
+
+    history = model.fit(inputs, targets, epochs=300)
+    for ta1, ta2 in zip(history.history["tolerance_accuracy"],
+                        history.history["tolerance_accuracy_class"]):
+        assert ta1 == ta2

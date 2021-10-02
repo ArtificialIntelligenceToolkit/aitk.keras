@@ -37,7 +37,7 @@ class MeanSquaredError(ObjectiveBase):
 
 class SquaredError(ObjectiveBase):
     def __init__(self):
-        """
+        r"""
         A squared-error / `L2` loss.
 
         Notes
@@ -78,7 +78,7 @@ class SquaredError(ObjectiveBase):
 
     @staticmethod
     def grad(y, y_pred, z, act_fn):
-        """
+        r"""
         Gradient of the squared error loss with respect to the pre-nonlinearity
         input, `z`.
 
@@ -121,7 +121,7 @@ class SquaredError(ObjectiveBase):
 
 class CrossEntropy(ObjectiveBase):
     def __init__(self):
-        """
+        r"""
         A cross-entropy loss.
 
         Notes
@@ -180,7 +180,7 @@ class CrossEntropy(ObjectiveBase):
 
     @staticmethod
     def grad(y, y_pred):
-        """
+        r"""
         Compute the gradient of the cross entropy loss with regard to the
         softmax input, `z`.
 
@@ -236,7 +236,7 @@ class CrossEntropy(ObjectiveBase):
 
 class VAELoss(ObjectiveBase):
     def __init__(self):
-        """
+        r"""
         The variational lower bound for a variational autoencoder with Bernoulli
         units.
 
@@ -271,7 +271,7 @@ class VAELoss(ObjectiveBase):
 
     @staticmethod
     def loss(y, y_pred, t_mean, t_log_var):
-        """
+        r"""
         Variational lower bound for a Bernoulli VAE.
 
         Parameters
@@ -342,7 +342,7 @@ class VAELoss(ObjectiveBase):
 
 class WGAN_GPLoss(ObjectiveBase):
     def __init__(self, lambda_=10):
-        """
+        r"""
         The loss function for a Wasserstein GAN [*]_ [*]_ with gradient penalty.
 
         Notes
@@ -536,7 +536,7 @@ class NCELoss(ObjectiveBase):
         init="glorot_uniform",
         subtract_log_label_prob=True,
     ):
-        """
+        r"""
         A noise contrastive estimation (NCE) loss function.
 
         Notes

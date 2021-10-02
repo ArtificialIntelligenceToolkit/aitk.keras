@@ -8,10 +8,36 @@
 #
 # **************************************************************
 
-import numpy as np
+"""
+Metrics can be computed as a stateless function:
 
-class ToleranceAccuracy():
+metric(targets, outputs)
+
+or as a stateful subclass of Metric.
+"""
+
+import numpy as np
+from abc import ABC, abstractmethod
+
+class Metric(ABC):
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def reset_state(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_state(self, targets, outputs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def result(self):
+        raise NotImplementedError
+
+class ToleranceAccuracy(Metric):
     def __init__(self, tolerance):
+        super().__init__()
         self.tolerance = tolerance
         self.name = "tolerance_accuracy"
         self.reset_state()
@@ -29,3 +55,14 @@ class ToleranceAccuracy():
 
     def result(self):
         return self.accurate / self.total
+
+def tolerance_accuracy(targets, outputs):
+    return np.mean(
+        np.all(
+            np.less_equal(np.abs(targets - outputs),
+                          tolerance_accuracy.tolerance),
+            axis=-1),
+        axis=-1,
+    )
+# Needs the tolerance from somewhere:
+tolerance_accuracy.tolerance = 0.1
