@@ -441,7 +441,8 @@ def test_metrics():
                         optimizer=SGD(learning_rate=0.1, momentum=0.9),
                         metrics=[tolerance_accuracy_class, tolerance_accuracy])
 
-    history = model.fit(inputs, targets, epochs=300)
+    history = model.fit(inputs, targets, epochs=300, shuffle=False,
+                        batch_size=3)
     for ta1, ta2 in zip(history.history["tolerance_accuracy"],
                         history.history["tolerance_accuracy_class"]):
         assert ta1 == ta2
