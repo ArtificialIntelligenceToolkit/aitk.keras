@@ -39,7 +39,7 @@ import numpy as np
 from six.moves.urllib.request import urlopen
 from urllib.request import urlretrieve
 
-await get_file_async(origin_folder, file_name):
+await def get_file_async(origin_folder, file_name):
     try:
         print("Downloading data from %s" % (origin_folder + file_name))
         import js
