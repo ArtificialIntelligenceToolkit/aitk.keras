@@ -20,3 +20,11 @@ from . import initializers
 from . import modules
 from . import models
 from . import datasets
+
+import sys
+import numpy
+
+# Create a fake module "backend" that is really numpy
+backend = numpy
+backend.image_data_format = lambda: 'channels_last'
+sys.modules["aitk.keras.backend"] = backend
