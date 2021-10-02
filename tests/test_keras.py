@@ -242,7 +242,7 @@ def test_fit_functional():
 def test_fit_sgd():
     from aitk.keras.optimizers import SGD
     model_aitk = build_model("aitk", SGD(lr=.1, momentum=.9), "mse")
-    model_aitk.fit(inputs, targets, epochs=50)
+    model_aitk.fit(inputs, targets, epochs=50, shuffle=False)
     outputs = model_aitk.predict(inputs)
     assert [round(v[0]) for v in outputs] == [0, 1, 1, 0]
 
@@ -265,8 +265,8 @@ def test_multiple_outputs():
                 for item_tf, item_aitk in zip(row_tf, row_aitk):
                     assert abs(item_tf - item_aitk) < MAX_DIFF
 
-        model_tf.fit(inputs1, targets2, epochs=1)
-        model_aitk.fit(inputs1, targets2, epochs=1)
+        model_tf.fit(inputs1, targets2, epochs=1, shuffle=False)
+        model_aitk.fit(inputs1, targets2, epochs=1, shuffle=False)
 
 def test_multiple_inputs():
     model_tf = build_model_multiple_inputs("tf", "adam", "mse")
@@ -285,8 +285,8 @@ def test_multiple_inputs():
             for item_tf, item_aitk in zip(out_tf, out_aitk):
                 assert abs(item_tf - item_aitk) < MAX_DIFF
 
-        model_tf.fit(inputs2, targets1, epochs=1)
-        model_aitk.fit(inputs2, targets1, epochs=1)
+        model_tf.fit(inputs2, targets1, epochs=1, shuffle=False)
+        model_aitk.fit(inputs2, targets1, epochs=1, shuffle=False)
 
 def test_multiple_both():
     model_tf = build_model_multiple_both("tf", "adam", "mse")
@@ -306,8 +306,8 @@ def test_multiple_both():
                 for item_tf, item_aitk in zip(row_tf, row_aitk):
                     assert abs(item_tf - item_aitk) < MAX_DIFF
 
-        model_tf.fit(inputs2, targets2, epochs=1)
-        model_aitk.fit(inputs2, targets2, epochs=1)
+        model_tf.fit(inputs2, targets2, epochs=1, shuffle=False)
+        model_aitk.fit(inputs2, targets2, epochs=1, shuffle=False)
 
 def test_multiple_all():
     model_tf = build_model_multiple_all("tf", "adam", "mse")
@@ -327,8 +327,8 @@ def test_multiple_all():
                 for item_tf, item_aitk in zip(row_tf, row_aitk):
                     assert abs(item_tf - item_aitk) < MAX_DIFF
 
-        model_tf.fit(inputs2, targets2, epochs=1)
-        model_aitk.fit(inputs2, targets2, epochs=1)
+        model_tf.fit(inputs2, targets2, epochs=1, shuffle=False)
+        model_aitk.fit(inputs2, targets2, epochs=1, shuffle=False)
 
 def build_topological_sort(framework):
     if framework == "tf":
@@ -389,8 +389,8 @@ def test_diff_multiple_inputs():
 
     compare_output(out1[0], out2)
 
-    model1.fit(inputs2, targets1, epochs=1)
-    model2.fit(inputs, targets, epochs=1)
+    model1.fit(inputs2, targets1, epochs=1, shuffle=False)
+    model2.fit(inputs, targets, epochs=1, shuffle=False)
 
     out1 = model1.predict(inputs2)
     out2 = model2.predict(inputs)
@@ -411,8 +411,8 @@ def test_diff_functional():
 
     compare_output(out1, out2)
 
-    model1.fit(inputs, targets, epochs=1)
-    model2.fit(inputs, targets, epochs=1)
+    model1.fit(inputs, targets, epochs=1, shuffle=False)
+    model2.fit(inputs, targets, epochs=1, shuffle=False)
 
     out1 = model1.predict(inputs)
     out2 = model2.predict(inputs)
@@ -427,7 +427,7 @@ def test_callbacks():
         def on_epoch_end(self, epoch, logs=None):
             print("epoch", epoch)
 
-    model.fit(inputs, targets, callbacks=[MyCallback()])
+    model.fit(inputs, targets, callbacks=[MyCallback()], shuffle=False)
 
 def test_metrics():
     from aitk.keras.metrics import tolerance_accuracy, ToleranceAccuracy
@@ -446,3 +446,61 @@ def test_metrics():
     for ta1, ta2 in zip(history.history["tolerance_accuracy"],
                         history.history["tolerance_accuracy_class"]):
         assert ta1 == ta2
+
+def test_shuffle():
+    from aitk.keras.optimizers import SGD
+
+    # Expect these to vary, even with same weights:
+    model1 = build_model(
+        "aitk",
+        optimizer=SGD(learning_rate=0.1, momentum=0.9),
+    )
+    weights = model1.get_weights()
+
+    model2 = build_model(
+        "aitk",
+        optimizer=SGD(learning_rate=0.1, momentum=0.9),
+    )
+    model2.set_weights(weights)
+
+    history1 = model1.fit(inputs, targets, epochs=300, shuffle=True,
+                          batch_size=3)
+    history2 = model2.fit(inputs, targets, epochs=300, shuffle=True,
+                          batch_size=3)
+
+    same = True
+    for ta1, ta2 in zip(history1.history["loss"],
+                        history2.history["loss"]):
+        if ta1 != ta2:
+            same = False
+            break
+    assert not same
+
+def test_no_shuffle():
+    from aitk.keras.optimizers import SGD
+
+    # Expect these to be exactly the same:
+    model1 = build_model(
+        "aitk",
+        optimizer=SGD(learning_rate=0.1, momentum=0.9),
+    )
+    weights = model1.get_weights()
+
+    model2 = build_model(
+        "aitk",
+        optimizer=SGD(learning_rate=0.1, momentum=0.9),
+    )
+    model2.set_weights(weights)
+
+    history1 = model1.fit(inputs, targets, epochs=300, shuffle=False,
+                          batch_size=3)
+    history2 = model2.fit(inputs, targets, epochs=300, shuffle=False,
+                          batch_size=3)
+
+    same = True
+    for ta1, ta2 in zip(history1.history["loss"],
+                        history2.history["loss"]):
+        if ta1 != ta2:
+            same = False
+            break
+    assert same

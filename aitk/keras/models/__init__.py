@@ -31,6 +31,7 @@ NAME_CACHE = {}
 
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
+        self.stop_training = False
         self.sequential = False
         self.history = History()
         self.name = self.make_name(name)
@@ -236,6 +237,7 @@ class Model():
             initial_epoch=None, shuffle=True):
         # FIXME: use shuffle
         # FIXME: use initial_epoch
+        self.stop_training = False
         verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
         callbacks.append(self.history)
@@ -246,6 +248,8 @@ class Model():
             callback.set_model(self)
             callback.on_train_begin()
         for epoch in range(epochs):
+            if self.stop_training:
+                break
             epoch_metric_values = {}
             epoch_metric_counts = {}
             for metric in self.metrics:
@@ -260,7 +264,7 @@ class Model():
 
             loss = 0
             total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
-            for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size):
+            for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size, shuffle):
                 batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, callbacks)
                 loss += batch_loss
                 for metric in batch_metric_values:
@@ -285,8 +289,10 @@ class Model():
                     epoch,
                     logs
                 )
+        if self.stop_training:
+            print("Training stopped early.")
         for callback in callbacks:
-            callback.on_train_end({"loss": loss})
+            callback.on_train_end()
         return self.history
 
     def flush_gradients(self):
@@ -294,14 +300,18 @@ class Model():
             if layer.has_trainable_params():
                 layer.flush_gradients()
 
-    def enumerate_batches(self, inputs, targets, batch_size):
+    def enumerate_batches(self, inputs, targets, batch_size, shuffle):
+        indexes = np.arange(self.get_length_of_inputs(inputs))
+        if shuffle:
+            # In place shuffle
+            np.random.shuffle(indexes)
         current_row = 0
         batch = 0
         while (current_row * batch_size) < self.get_length_of_inputs(inputs):
             batch_inputs = self.get_batch_inputs(
-                inputs, current_row, batch_size)
+                inputs, indexes, current_row, batch_size)
             batch_targets = self.get_batch_targets(
-                targets, current_row, batch_size)
+                targets, indexes, current_row, batch_size)
             current_row += 1
             yield batch, self.get_length_of_inputs(batch_inputs), (batch_inputs, batch_targets)
             batch += 1
@@ -312,19 +322,21 @@ class Model():
         else:
             return len(inputs[0])
 
-    def get_batch_inputs(self, inputs, current_row, batch_size):
+    def get_batch_inputs(self, inputs, indexes, current_row, batch_size):
+        batch_indexes = indexes[current_row:current_row + batch_size]
         if len(self.get_input_layers()) == 1:
-            return inputs[current_row:current_row + batch_size]
+            return inputs[batch_indexes]
         else:
-            return [np.array(inputs[i][current_row:current_row + batch_size])
+            return [np.array(inputs[i][batch_indexes])
                     for i in range(len(self.get_input_layers()))]
 
-    def get_batch_targets(self, targets, current_row, batch_size):
-        if not isinstance(targets, (list, tuple)):
+    def get_batch_targets(self, targets, indexes, current_row, batch_size):
+        batch_indexes = indexes[current_row:current_row + batch_size]
+        if self.sequential:
             # Numpy, one bank:
-            return targets[current_row:current_row + batch_size]
+            return targets[batch_indexes]
         else:
-            return [np.array(targets[i][current_row:current_row + batch_size])
+            return [np.array(targets[i][batch_indexes])
                     for i in range(len(self.get_output_layers()))]
 
     def train_batch(self, dataset, batch, length, callbacks):
