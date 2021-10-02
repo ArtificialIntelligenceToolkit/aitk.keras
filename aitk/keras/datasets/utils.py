@@ -46,12 +46,12 @@ async def get_file_async(origin_folder, file_name):
         response = await js.fetch(origin_folder + file_name)
         fp = io.BytesIO((await response.arrayBuffer()).to_py())
         bytes = fp.read()
-        with open(path, "wb") as fp:
+        with open(file_name, "wb") as fp:
             fp.write(bytes)
     except Exception:
         print("Could not load dataset")
         return
-    return fp
+    return file_name
 
 def path_to_string(path):
   """Convert `PathLike` objects to their string representation.
