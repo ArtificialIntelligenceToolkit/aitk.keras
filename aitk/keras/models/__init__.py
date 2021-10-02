@@ -115,16 +115,20 @@ class Model():
         other_params = 0
         for i, layer in enumerate(topological_sort(self.get_input_layers())):
             layer_name = ("%s (%s)" % (layer.name, layer.__class__.__name__))[:25]
-            parameters = sum([np.prod(item.shape) for item in layer.parameters.values() if item is not None])
-            total_parameters += parameters
             output_shape = (None, layer.n_out) if isinstance(layer.n_out, numbers.Number) else layer.n_out
-            print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {parameters:>20,}")
+            if self._input_layers is not None:
+                parameters = sum([np.prod(item.shape) for item in layer.parameters.values() if item is not None])
+                total_parameters += parameters
+                print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {parameters:>20,}")
+            else:
+                print(f"{layer_name:25s} {str(output_shape)[:15]:>15s} {'(uncompiled)':>20}")
             if i != len(self.layers) - 1:
                 print("_" * 65)
         print("=" * 65)
-        print(f"Total params: {total_parameters:,}")
-        print(f"Trainable params: {total_parameters + other_params:,}")
-        print(f"Non-trainable params: {other_params:,}")
+        if self._input_layers is not None:
+            print(f"Total params: {total_parameters:,}")
+            print(f"Trainable params: {total_parameters + other_params:,}")
+            print(f"Non-trainable params: {other_params:,}")
         print("_" * 65)
 
     def compile(self, optimizer, loss, metrics=None):
@@ -132,6 +136,7 @@ class Model():
         self._output_layers = [layer for layer in self.layers if len(layer.output_layers) == 0]
         for layer in self.layers:
             if not isinstance(layer, Input):
+                self.is_initialized = False
                 layer.optimizer = OptimizerInitializer(optimizer)()
                 loss_function = LOSS_FUNCTIONS[loss]
                 self.loss_function = loss_function()
