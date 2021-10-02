@@ -15,6 +15,7 @@ from ..callbacks import History
 from ..utils import topological_sort
 
 import numpy as np
+import time
 import math
 import numbers
 import functools
@@ -233,10 +234,16 @@ class Model():
                     layer.set_weights(weights[i:i+count])
                     i += count
 
+    def format_time(self, seconds):
+        if seconds > 1:
+            return f"{seconds:.0f}s"
+        elif seconds * 1000 > 1:
+            return f"{seconds * 1000:.0f}ms"
+        else:
+            return f"{seconds * 1000000:.0f}µs"
+
     def fit(self, inputs, targets, batch_size=32, epochs=1, verbose="auto", callbacks=None,
             initial_epoch=None, shuffle=True):
-        # FIXME: use shuffle
-        # FIXME: use initial_epoch
         self.stop_training = False
         verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
@@ -247,7 +254,7 @@ class Model():
         for callback in callbacks:
             callback.set_model(self)
             callback.on_train_begin()
-        for epoch in range(epochs):
+        for epoch in range(initial_epoch, epochs):
             if self.stop_training:
                 break
             epoch_metric_values = {}
@@ -265,16 +272,29 @@ class Model():
             loss = 0
             total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size, shuffle):
+                start_time = time.monotonic()
                 batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, callbacks)
                 loss += batch_loss
                 for metric in batch_metric_values:
                     # Need to account for uneven batch sizes:
                     epoch_metric_values[metric] += batch_metric_values[metric] * length
                     epoch_metric_counts[metric] += length
+                end_time = time.monotonic()
                 self.step += length
                 if verbose:
                     print(f"Epoch {epoch+1}/{epochs}")
-                    print(f"{batch+1}/{total_batches} [==============================] - Xs time/step - loss: {loss}")
+                    ftime = self.format_time((end_time - start_time) / length)
+                    logs = {}
+                    for metric in self.metrics:
+                        if hasattr(metric, "result"):
+                            logs[metric.name] = metric.result()
+                        else:
+                            if metric.__name__ in batch_metric_values:
+                                logs[metric.__name__] = batch_metric_values[metric.__name__]
+                    metrics = " - ".join(["%s: %.4f" % (metric, logs[metric]) for metric in batch_metric_values])
+                    if metrics:
+                        metrics = " - " + metrics
+                    print(f"{batch+1}/{total_batches} [==============================] - {end_time - start_time:.0f}s {ftime}/step - loss: {loss:.4f}{metrics}")
             logs = {
                 "loss": loss,
             }
