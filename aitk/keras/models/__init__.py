@@ -232,8 +232,9 @@ class Model():
                     i += count
 
     def fit(self, inputs, targets, batch_size=32, epochs=1, verbose="auto", callbacks=None,
-            shuffle=True):
+            initial_epoch=None, shuffle=True):
         # FIXME: use shuffle
+        # FIXME: use initial_epoch
         verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
         callbacks.append(self.history)
@@ -241,13 +242,15 @@ class Model():
         targets = np.array(targets, dtype=float)
         self.flush_gradients()
         for callback in callbacks:
+            callback.set_model(self)
             callback.on_train_begin()
         for epoch in range(epochs):
             for metric in self.metrics:
-                metric.reset_state()
+                if hasattr(metric, "reset_state"):
+                    metric.reset_state()
 
             for callback in callbacks:
-                callback.on_epoch_begin(epoch, {"step": self.step})
+                callback.on_epoch_begin(epoch)
             loss = 0
             total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size):
@@ -258,11 +261,17 @@ class Model():
                     print(f"{batch+1}/{total_batches} [==============================] - Xs time/step - loss: {loss}")
             logs = {
                 "loss": loss,
-                "step": self.step,
             }
             for metric in self.metrics:
-                logs[metric.name] = metric.result()
-
+                if hasattr(metric, "result"):
+                    logs[metric.name] = metric.result()
+                else:
+                    # Fixme: handle functional metrics at batch level
+                    # and pass reults here
+                    # FIXME: which is more correct: the metric at batch leve
+                    # or after all of the weights have changed?
+                    outputs = self.predict(inputs)
+                    logs[str(metric.__name__)] = metric(targets, outputs)
             for callback in callbacks:
                 callback.on_epoch_end(
                     epoch,
@@ -320,6 +329,7 @@ class Model():
         batch_loss = 0
         for callback in callbacks:
             callback.on_train_batch_begin(batch)
+        results = 0
         if self.sequential:
             dY_pred = self.loss_function.grad(
                 targets,
@@ -335,7 +345,8 @@ class Model():
 
             batch_loss = self.loss_function(targets, outputs)
             for metric in self.metrics:
-                metric.update_state(targets, outputs)
+                if hasattr(metric, "update_state"):
+                    metric.update_state(targets, outputs)
         else:
             for out_n in range(len(self.get_output_layers())):
                 dY_pred = self.loss_function.grad(
@@ -352,7 +363,8 @@ class Model():
 
                 batch_loss += self.loss_function(targets[out_n], outputs[out_n])
                 for metric in self.metrics:
-                    metric.update_state(targets[out_n], outputs[out_n])
+                    if hasattr(metric, "update_state"):
+                        metric.update_state(targets[out_n], outputs[out_n])
 
         for callback in callbacks:
             callback.on_train_batch_end(batch, {"batch_loss": batch_loss})

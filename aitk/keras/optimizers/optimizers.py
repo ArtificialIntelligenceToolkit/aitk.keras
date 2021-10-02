@@ -6,7 +6,7 @@ from numpy.linalg import norm
 
 
 class OptimizerBase(ABC):
-    def __init__(self, lr, scheduler=None):
+    def __init__(self, learning_rate, scheduler=None):
         """
         An abstract base class for all Optimizer objects.
 
@@ -17,7 +17,7 @@ class OptimizerBase(ABC):
         self.cache = {}
         self.cur_step = 0
         self.hyperparameters = {}
-        self.lr_scheduler = SchedulerInitializer(scheduler, lr=lr)()
+        self.lr_scheduler = SchedulerInitializer(scheduler, lr=learning_rate)()
 
     def __call__(self, param, param_grad, param_name, cur_loss=None):
         return self.update(param, param_grad, param_name, cur_loss)
@@ -57,7 +57,7 @@ class OptimizerBase(ABC):
 
 class SGD(OptimizerBase):
     def __init__(
-        self, lr=0.01, momentum=0.0, clip_norm=None, lr_scheduler=None, **kwargs
+        self, learning_rate=0.01, momentum=0.0, clip_norm=None, lr_scheduler=None, **kwargs
     ):
         """
         A stochastic gradient descent optimizer.
@@ -77,7 +77,7 @@ class SGD(OptimizerBase):
 
         Parameters
         ----------
-        lr : float
+        learning_rate : float
             Learning rate for SGD. If scheduler is not None, this is used as
             the starting learning rate. Default is 0.01.
         momentum : float in range [0, 1]
@@ -88,13 +88,17 @@ class SGD(OptimizerBase):
             `clip_norm` before computing update. Default is None.
         lr_scheduler : str, :doc:`Scheduler <numpy_ml.neural_nets.schedulers>` object, or None
             The learning rate scheduler. If None, use a constant learning
-            rate equal to `lr`. Default is None.
+            rate equal to `learning_rate`. Default is None.
         """
-        super().__init__(lr, lr_scheduler)
+        if "lr" in kwargs:
+            learning_rate = kwargs["lr"]
+            print("UserWarning: The `lr` argument is deprecated, use `learning_rate` instead.")
+
+        super().__init__(learning_rate, lr_scheduler)
 
         self.hyperparameters = {
             "id": "SGD",
-            "lr": lr,
+            "learning_rate": learning_rate,
             "momentum": momentum,
             "clip_norm": clip_norm,
             "lr_scheduler": str(self.lr_scheduler),
@@ -102,9 +106,9 @@ class SGD(OptimizerBase):
 
     def __str__(self):
         H = self.hyperparameters
-        lr, mm, cn, sc = H["lr"], H["momentum"], H["clip_norm"], H["lr_scheduler"]
-        return "SGD(lr={}, momentum={}, clip_norm={}, lr_scheduler={})".format(
-            lr, mm, cn, sc
+        learning_rate, mm, cn, sc = H["learning_rate"], H["momentum"], H["clip_norm"], H["lr_scheduler"]
+        return "SGD(learning_rate={}, momentum={}, clip_norm={}, lr_scheduler={})".format(
+            learning_rate, mm, cn, sc
         )
 
     def update(self, param, param_grad, param_name, cur_loss=None):
@@ -133,7 +137,7 @@ class SGD(OptimizerBase):
         C = self.cache
         H = self.hyperparameters
         momentum, clip_norm = H["momentum"], H["clip_norm"]
-        lr = self.lr_scheduler(self.cur_step, cur_loss)
+        learning_rate = self.lr_scheduler(self.cur_step, cur_loss)
 
         if param_name not in C:
             C[param_name] = np.zeros_like(param_grad)
@@ -143,7 +147,7 @@ class SGD(OptimizerBase):
         if norm(param_grad) > t:
             param_grad = param_grad * t / norm(param_grad)
 
-        update = momentum * C[param_name] + lr * param_grad
+        update = momentum * C[param_name] + learning_rate * param_grad
         self.cache[param_name] = update
         return param - update
 
@@ -154,7 +158,7 @@ class SGD(OptimizerBase):
 
 
 class AdaGrad(OptimizerBase):
-    def __init__(self, lr=0.01, eps=1e-7, clip_norm=None, lr_scheduler=None, **kwargs):
+    def __init__(self, learning_rate=0.01, eps=1e-7, clip_norm=None, lr_scheduler=None, **kwargs):
         """
         An AdaGrad optimizer.
 
@@ -167,7 +171,7 @@ class AdaGrad(OptimizerBase):
         Equations::
 
             cache[t] = cache[t-1] + grad[t] ** 2
-            update[t] = lr * grad[t] / (np.sqrt(cache[t]) + eps)
+            update[t] = learning_rate * grad[t] / (np.sqrt(cache[t]) + eps)
             param[t+1] = param[t] - update[t]
 
         Note that the ``**`` and `/` operations are elementwise
@@ -182,7 +186,7 @@ class AdaGrad(OptimizerBase):
 
         Parameters
         ----------
-        lr : float
+        learning_rate : float
             Global learning rate
         eps : float
             Smoothing term to avoid divide-by-zero errors in the update calc.
@@ -192,14 +196,18 @@ class AdaGrad(OptimizerBase):
             `clip_norm` before computing update. Default is None.
         lr_scheduler : str or :doc:`Scheduler <numpy_ml.neural_nets.schedulers>` object or None
             The learning rate scheduler. If None, use a constant learning
-            rate equal to `lr`. Default is None.
+            rate equal to `learning_rate`. Default is None.
         """
-        super().__init__(lr, lr_scheduler)
+        if "lr" in kwargs:
+            learning_rate = kwargs["lr"]
+            print("UserWarning: The `lr` argument is deprecated, use `learning_rate` instead.")
+
+        super().__init__(learning_rate, lr_scheduler)
 
         self.cache = {}
         self.hyperparameters = {
             "id": "AdaGrad",
-            "lr": lr,
+            "learning_rate": learning_rate,
             "eps": eps,
             "clip_norm": clip_norm,
             "lr_scheduler": str(self.lr_scheduler),
@@ -207,9 +215,9 @@ class AdaGrad(OptimizerBase):
 
     def __str__(self):
         H = self.hyperparameters
-        lr, eps, cn, sc = H["lr"], H["eps"], H["clip_norm"], H["lr_scheduler"]
-        return "AdaGrad(lr={}, eps={}, clip_norm={}, lr_scheduler={})".format(
-            lr, eps, cn, sc
+        learning_rate, eps, cn, sc = H["learning_rate"], H["eps"], H["clip_norm"], H["lr_scheduler"]
+        return "AdaGrad(learning_rate={}, eps={}, clip_norm={}, lr_scheduler={})".format(
+            learning_rate, eps, cn, sc
         )
 
     def update(self, param, param_grad, param_name, cur_loss=None):
@@ -219,7 +227,7 @@ class AdaGrad(OptimizerBase):
         Notes
         -----
         Adjusts the learning rate of each weight based on the magnitudes of its
-        gradients (big gradient -> small lr, small gradient -> big lr).
+        gradients (big gradient -> small learning_rate, small gradient -> big learning_rate).
 
         Parameters
         ----------
@@ -243,7 +251,7 @@ class AdaGrad(OptimizerBase):
         C = self.cache
         H = self.hyperparameters
         eps, clip_norm = H["eps"], H["clip_norm"]
-        lr = self.lr_scheduler(self.cur_step, cur_loss)
+        learning_rate = self.lr_scheduler(self.cur_step, cur_loss)
 
         if param_name not in C:
             C[param_name] = np.zeros_like(param_grad)
@@ -254,14 +262,14 @@ class AdaGrad(OptimizerBase):
             param_grad = param_grad * t / norm(param_grad)
 
         C[param_name] += param_grad ** 2
-        update = lr * param_grad / (np.sqrt(C[param_name]) + eps)
+        update = learning_rate * param_grad / (np.sqrt(C[param_name]) + eps)
         self.cache = C
         return param - update
 
 
 class RMSProp(OptimizerBase):
     def __init__(
-        self, lr=0.001, decay=0.9, eps=1e-7, clip_norm=None, lr_scheduler=None, **kwargs
+        self, learning_rate=0.001, decay=0.9, eps=1e-7, clip_norm=None, lr_scheduler=None, **kwargs
     ):
         """
         RMSProp optimizer.
@@ -278,14 +286,14 @@ class RMSProp(OptimizerBase):
         Equations::
 
             cache[t] = decay * cache[t-1] + (1 - decay) * grad[t] ** 2
-            update[t] = lr * grad[t] / (np.sqrt(cache[t]) + eps)
+            update[t] = learning_rate * grad[t] / (np.sqrt(cache[t]) + eps)
             param[t+1] = param[t] - update[t]
 
         Note that the ``**`` and ``/`` operations are elementwise.
 
         Parameters
         ----------
-        lr : float
+        learning_rate : float
             Learning rate for update. Default is 0.001.
         decay : float in [0, 1]
             Rate of decay for the moving average. Typical values are [0.9,
@@ -297,14 +305,18 @@ class RMSProp(OptimizerBase):
             `clip_norm` before computing update. Default is None.
         lr_scheduler : str or :doc:`Scheduler <numpy_ml.neural_nets.schedulers>` object or None
             The learning rate scheduler. If None, use a constant learning
-            rate equal to `lr`. Default is None.
+            rate equal to `learning_rate`. Default is None.
         """
-        super().__init__(lr, lr_scheduler)
+        if "lr" in kwargs:
+            learning_rate = kwargs["lr"]
+            print("UserWarning: The `lr` argument is deprecated, use `learning_rate` instead.")
+
+        super().__init__(learning_rate, lr_scheduler)
 
         self.cache = {}
         self.hyperparameters = {
             "id": "RMSProp",
-            "lr": lr,
+            "learning_rate": learning_rate,
             "eps": eps,
             "decay": decay,
             "clip_norm": clip_norm,
@@ -314,9 +326,9 @@ class RMSProp(OptimizerBase):
     def __str__(self):
         H = self.hyperparameters
         sc = H["lr_scheduler"]
-        lr, eps, dc, cn = H["lr"], H["eps"], H["decay"], H["clip_norm"]
-        return "RMSProp(lr={}, eps={}, decay={}, clip_norm={}, lr_scheduler={})".format(
-            lr, eps, dc, cn, sc
+        learning_rate, eps, dc, cn = H["learning_rate"], H["eps"], H["decay"], H["clip_norm"]
+        return "RMSProp(learning_rate={}, eps={}, decay={}, clip_norm={}, lr_scheduler={})".format(
+            learning_rate, eps, dc, cn, sc
         )
 
     def update(self, param, param_grad, param_name, cur_loss=None):
@@ -345,7 +357,7 @@ class RMSProp(OptimizerBase):
         C = self.cache
         H = self.hyperparameters
         eps, decay, clip_norm = H["eps"], H["decay"], H["clip_norm"]
-        lr = self.lr_scheduler(self.cur_step, cur_loss)
+        learning_rate = self.lr_scheduler(self.cur_step, cur_loss)
 
         if param_name not in C:
             C[param_name] = np.zeros_like(param_grad)
@@ -356,7 +368,7 @@ class RMSProp(OptimizerBase):
             param_grad = param_grad * t / norm(param_grad)
 
         C[param_name] = decay * C[param_name] + (1 - decay) * param_grad ** 2
-        update = lr * param_grad / (np.sqrt(C[param_name]) + eps)
+        update = learning_rate * param_grad / (np.sqrt(C[param_name]) + eps)
         self.cache = C
         return param - update
 
@@ -364,7 +376,7 @@ class RMSProp(OptimizerBase):
 class Adam(OptimizerBase):
     def __init__(
         self,
-        lr=0.001,
+        learning_rate=0.001,
         decay1=0.9,
         decay2=0.999,
         eps=1e-7,
@@ -383,7 +395,7 @@ class Adam(OptimizerBase):
 
         Parameters
         ----------
-        lr : float
+        learning_rate : float
             Learning rate for update. This parameter is ignored if using
             :class:`~numpy_ml.neural_nets.schedulers.NoamScheduler`.
             Default is 0.001.
@@ -401,14 +413,18 @@ class Adam(OptimizerBase):
             `clip_norm` before computing update. Default is None.
         lr_scheduler : str, or :doc:`Scheduler <numpy_ml.neural_nets.schedulers>` object, or None
             The learning rate scheduler. If None, use a constant learning rate
-            equal to `lr`. Default is None.
+            equal to `learning_rate`. Default is None.
         """
-        super().__init__(lr, lr_scheduler)
+        if "lr" in kwargs:
+            learning_rate = kwargs["lr"]
+            print("UserWarning: The `lr` argument is deprecated, use `learning_rate` instead.")
+
+        super().__init__(learning_rate, lr_scheduler)
 
         self.cache = {}
         self.hyperparameters = {
             "id": "Adam",
-            "lr": lr,
+            "learning_rate": learning_rate,
             "eps": eps,
             "decay1": decay1,
             "decay2": decay2,
@@ -418,10 +434,10 @@ class Adam(OptimizerBase):
 
     def __str__(self):
         H = self.hyperparameters
-        lr, d1, d2 = H["lr"], H["decay1"], H["decay2"]
+        learning_rate, d1, d2 = H["learning_rate"], H["decay1"], H["decay2"]
         eps, cn, sc = H["eps"], H["clip_norm"], H["lr_scheduler"]
-        return "Adam(lr={}, decay1={}, decay2={}, eps={}, clip_norm={}, lr_scheduler={})".format(
-            lr, d1, d2, eps, cn, sc
+        return "Adam(learning_rate={}, decay1={}, decay2={}, eps={}, clip_norm={}, lr_scheduler={})".format(
+            learning_rate, d1, d2, eps, cn, sc
         )
 
     def update(self, param, param_grad, param_name, cur_loss=None):
@@ -451,7 +467,7 @@ class Adam(OptimizerBase):
         H = self.hyperparameters
         d1, d2 = H["decay1"], H["decay2"]
         eps, clip_norm = H["eps"], H["clip_norm"]
-        lr = self.lr_scheduler(self.cur_step, cur_loss)
+        learning_rate = self.lr_scheduler(self.cur_step, cur_loss)
 
         if param_name not in C:
             C[param_name] = {
@@ -478,5 +494,5 @@ class Adam(OptimizerBase):
         # calc unbiased moment estimates and Adam update
         v_hat = C[param_name]["var"] / (1 - d2 ** t)
         m_hat = C[param_name]["mean"] / (1 - d1 ** t)
-        update = lr * m_hat / (np.sqrt(v_hat) + eps)
+        update = learning_rate * m_hat / (np.sqrt(v_hat) + eps)
         return param - update
