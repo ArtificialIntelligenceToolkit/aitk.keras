@@ -71,6 +71,7 @@ def load_data(path='mnist.npz'):
       https://creativecommons.org/licenses/by-sa/3.0/)
     """
     for origin_folder, file_hash in origin_folders:
+        download_path = None
         try:
             download_path = get_file(
                 path,
@@ -78,8 +79,9 @@ def load_data(path='mnist.npz'):
                 file_hash=file_hash)
         except Exception:
             print("Failed dataset download; trying another URL...")
+            continue
 
-        if os.path.isfile(download_path):
+        if download_path and os.path.isfile(download_path):
             with np.load(download_path, allow_pickle=True) as f:
                 x_train, y_train = f['x_train'], f['y_train']
                 x_test, y_test = f['x_test'], f['y_test']
@@ -133,10 +135,17 @@ async def load_data_async(path='mnist.npz'):
       https://creativecommons.org/licenses/by-sa/3.0/)
     """
     for origin_folder, file_hash in origin_folders:
+        download_path = None
         if not os.path.isfile(path):
-            download_path = await get_file_async(origin_folder, path)
+            try:
+                download_path = await get_file_async(origin_folder, path)
+            except Exception:
+                print("Failed dataset download; trying another URL...")
+                continue
+        else:
+            download_path = path
 
-        if os.path.isfile(download_path):
+        if download_path and os.path.isfile(download_path):
             with np.load(download_path, allow_pickle=True) as f:
                 x_train, y_train = f['x_train'], f['y_train']
                 x_test, y_test = f['x_test'], f['y_test']
