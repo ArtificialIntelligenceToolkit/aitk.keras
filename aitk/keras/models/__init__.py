@@ -297,6 +297,8 @@ class Model():
 
             loss = 0
             total_batches = math.ceil(self.get_length_of_inputs(inputs) / batch_size)
+            if verbose:
+                print(f"Epoch {epoch+1}/{epochs}")
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size, shuffle):
                 start_time = time.monotonic()
                 batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, callbacks)
@@ -308,9 +310,8 @@ class Model():
                 end_time = time.monotonic()
                 self.step += length
                 if verbose:
-                    print(f"Epoch {epoch+1}/{epochs}")
-                    ftime = self.format_time((end_time - start_time) / length)
                     logs = {}
+                    ftime = self.format_time((end_time - start_time) / length)
                     for metric in self.metrics:
                         if hasattr(metric, "result"):
                             logs[metric.name] = metric.result()
@@ -320,7 +321,10 @@ class Model():
                     metrics = " - ".join(["%s: %.4f" % (metric, logs[metric]) for metric in batch_metric_values])
                     if metrics:
                         metrics = " - " + metrics
-                    print(f"{batch+1}/{total_batches} [==============================] - {end_time - start_time:.0f}s {ftime}/step - loss: {loss:.4f}{metrics}")
+                # ideally update output here
+            if verbose:
+                # Until we have output screen formatting; uses the last computed times, metrics
+                print(f"{batch + 1}/{total_batches} [==============================] - {end_time - start_time:.0f}s {ftime}/step - loss: {loss:.4f}{metrics}")
             logs = {
                 "loss": loss,
             }
