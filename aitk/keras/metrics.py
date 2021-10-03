@@ -20,8 +20,9 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 class Metric(ABC):
-    def __init__(self):
+    def __init__(self, name):
         super().__init__()
+        self.name = name
 
     @abstractmethod
     def reset_state(self):
@@ -35,11 +36,13 @@ class Metric(ABC):
     def result(self):
         raise NotImplementedError
 
+    def __str__(self):
+        return self.name
+
 class ToleranceAccuracy(Metric):
     def __init__(self, tolerance):
-        super().__init__()
+        super().__init__("tolerance_accuracy")
         self.tolerance = tolerance
-        self.name = "tolerance_accuracy"
         self.reset_state()
 
     def reset_state(self):

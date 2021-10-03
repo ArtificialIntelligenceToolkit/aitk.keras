@@ -13,6 +13,7 @@ from ..initializers import (
 class ObjectiveBase(ABC):
     def __init__(self):
         super().__init__()
+        self.name = "base_loss"
 
     @abstractmethod
     def loss(self, y_true, y_pred):
@@ -24,6 +25,10 @@ class ObjectiveBase(ABC):
 
 
 class MeanSquaredError(ObjectiveBase):
+    def __init__(self):
+        super().__init__()
+        self.name = "mean_squared_error"
+
     def loss(self, y, y_pred):
         squared_error = np.square(y_pred - y)
         mse = np.mean(squared_error)
@@ -50,6 +55,7 @@ class SquaredError(ObjectiveBase):
                     = 0.5 ||\hat{\mathbf{y}} - \mathbf{y}||_2^2
         """
         super().__init__()
+        self.name = "squared_error"
 
     def __call__(self, y, y_pred):
         return self.loss(y, y_pred)
@@ -134,6 +140,7 @@ class CrossEntropy(ObjectiveBase):
                     = \sum_i y_i \log \hat{y}_i
         """
         super().__init__()
+        self.name = "cross_entropy"
 
     def __call__(self, y, y_pred):
         return self.loss(y, y_pred)
@@ -262,6 +269,7 @@ class VAELoss(ObjectiveBase):
            *arXiv preprint arXiv:1312.6114.* https://arxiv.org/pdf/1312.6114.pdf
         """
         super().__init__()
+        self.name = "vae_loss"
 
     def __call__(self, y, y_pred, t_mean, t_log_var):
         return self.loss(y, y_pred, t_mean, t_log_var)
@@ -393,6 +401,7 @@ class WGAN_GPLoss(ObjectiveBase):
         """
         self.lambda_ = lambda_
         super().__init__()
+        self.name = "wgan_gp_loss"
 
     def __call__(self, Y_fake, module, Y_real=None, gradInterp=None):
         """
@@ -617,6 +626,7 @@ class NCELoss(ObjectiveBase):
             Useful intermediate values computed during the loss computation.
         """
         super().__init__()
+        self.name = "nce_loss"
 
         self.init = init
         self.n_in = None

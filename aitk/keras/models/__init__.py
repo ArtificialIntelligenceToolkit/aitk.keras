@@ -24,11 +24,21 @@ from collections import defaultdict
 
 LOSS_FUNCTIONS = {
     "mse": MeanSquaredError,
+    "mean_squared_error": MeanSquaredError,
     "crossentropy": CrossEntropy,
     # FIXME: add more error functions
 }
 
 NAME_CACHE = {}
+
+def get_metric_name(metric):
+    if hasattr(metric, "name"):
+        return metric.name
+    elif hasattr(metric, "__name__"):
+        return metric.__name__
+    else:
+        return str(metric)
+        
 
 class Model():
     def __init__(self, inputs=None, outputs=None, name=None):
@@ -289,8 +299,8 @@ class Model():
                 if hasattr(metric, "reset_state"):
                     metric.reset_state()
                 else:
-                    epoch_metric_values[metric.__name__] = 0
-                    epoch_metric_counts[metric.__name__] = 0
+                    epoch_metric_values[get_metric_name(metric)] = 0
+                    epoch_metric_counts[get_metric_name(metric)] = 0
 
             for callback in callbacks:
                 callback.on_epoch_begin(epoch)
@@ -316,15 +326,12 @@ class Model():
                         if hasattr(metric, "result"):
                             logs[metric.name] = metric.result()
                         else:
-                            if metric.__name__ in batch_metric_values:
-                                logs[metric.__name__] = batch_metric_values[metric.__name__]
+                            if get_metric_name(metric) in batch_metric_values:
+                                logs[get_metric_name(metric)] = batch_metric_values[get_metric_name(metric)]
                     metrics = " - ".join(["%s: %.4f" % (metric, logs[metric]) for metric in batch_metric_values])
                     if metrics:
                         metrics = " - " + metrics
                 # ideally update output here
-            if verbose:
-                # Until we have output screen formatting; uses the last computed times, metrics
-                print(f"{batch + 1}/{total_batches} [==============================] - {end_time - start_time:.0f}s {ftime}/step - loss: {loss:.4f}{metrics}")
             logs = {
                 "loss": loss,
             }
@@ -332,8 +339,14 @@ class Model():
                 if hasattr(metric, "result"):
                     logs[metric.name] = metric.result()
                 else:
-                    if metric.__name__ in epoch_metric_values:
-                        logs[metric.__name__] = epoch_metric_values[metric.__name__] / epoch_metric_counts[metric.__name__]
+                    if get_metric_name(metric) in epoch_metric_values:
+                        logs[get_metric_name(metric)] = epoch_metric_values[get_metric_name(metric)] / epoch_metric_counts[get_metric_name(metric)]
+            if verbose:
+                metrics = " - ".join(["%s: %.4f" % (metric, logs[metric]) for metric in logs])
+                if metrics:
+                        metrics = " - " + metrics
+                # Until we have output screen formatting; uses the last computed times, metrics
+                print(f"{batch + 1}/{total_batches} [==============================] - {end_time - start_time:.0f}s {ftime}/step{metrics}")
             for callback in callbacks:
                 callback.on_epoch_end(
                     epoch,
@@ -419,7 +432,7 @@ class Model():
                 if hasattr(metric, "update_state"):
                     metric.update_state(targets, outputs)
                 else:
-                    batch_metric_values[metric.__name__] = metric(targets, outputs)
+                    batch_metric_values[get_metric_name(metric)] = metric(targets, outputs)
         else:
             for out_n in range(len(self.get_output_layers())):
                 dY_pred = self.loss_function.grad(
@@ -439,7 +452,7 @@ class Model():
                     if hasattr(metric, "update_state"):
                         metric.update_state(targets[out_n], outputs[out_n])
                     else:
-                        batch_metric_values[metric.__name__] += metric(targets, outputs)
+                        batch_metric_values[get_metric_name(metric)] += metric(targets, outputs)
 
         for callback in callbacks:
             logs = {"batch_loss": batch_loss}
