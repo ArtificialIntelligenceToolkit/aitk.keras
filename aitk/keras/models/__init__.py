@@ -280,6 +280,7 @@ class Model():
         """
         The training loop for all models.
         """
+        self.history = History()
         self.stop_training = False
         verbose = 1 if verbose == "auto" else verbose
         callbacks = [] if callbacks is None else callbacks
@@ -294,13 +295,11 @@ class Model():
             if self.stop_training:
                 break
             epoch_metric_values = {}
-            epoch_metric_counts = {}
             for metric in self.metrics:
                 if hasattr(metric, "reset_state"):
                     metric.reset_state()
                 else:
                     epoch_metric_values[get_metric_name(metric)] = 0
-                    epoch_metric_counts[get_metric_name(metric)] = 0
 
             for callback in callbacks:
                 callback.on_epoch_begin(epoch)
@@ -311,12 +310,11 @@ class Model():
                 print(f"Epoch {epoch+1}/{epochs}")
             for batch, length, batch_data in self.enumerate_batches(inputs, targets, batch_size, shuffle):
                 start_time = time.monotonic()
-                batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, callbacks)
+                batch_loss, batch_metric_values = self.train_batch(batch_data, batch, length, batch_size, callbacks)
                 loss += batch_loss
                 for metric in batch_metric_values:
-                    # Need to account for uneven batch sizes:
-                    epoch_metric_values[metric] += batch_metric_values[metric] * length
-                    epoch_metric_counts[metric] += length
+                    # FIXME: Need to account for uneven batch sizes?
+                    epoch_metric_values[metric] += batch_metric_values[metric]
                 end_time = time.monotonic()
                 self.step += length
                 if verbose:
@@ -340,7 +338,7 @@ class Model():
                     logs[metric.name] = metric.result()
                 else:
                     if get_metric_name(metric) in epoch_metric_values:
-                        logs[get_metric_name(metric)] = epoch_metric_values[get_metric_name(metric)] / epoch_metric_counts[get_metric_name(metric)]
+                        logs[get_metric_name(metric)] = epoch_metric_values[get_metric_name(metric)] / total_batches
             if verbose:
                 metrics = " - ".join(["%s: %.4f" % (metric, logs[metric]) for metric in logs])
                 if metrics:
@@ -402,8 +400,17 @@ class Model():
             return [np.array(targets[i][batch_indexes])
                     for i in range(len(self.get_output_layers()))]
 
-    def train_batch(self, dataset, batch, length, callbacks):
+    def train_batch(self, dataset, batch, length, batch_size, callbacks):
+        """
+        dataset = (inputs, targets)
+        batch = batch number (eg, step)
+        length = the actual size of the batch
+        batch_size = desired size of batch
+        """
         inputs, targets = dataset
+        # If the size of this batch is less than desired, scale it?
+        #scale = length / batch_size
+        scale = 1.0
         # Use predict to forward the activations, saving
         # needed information:
         outputs = self.predict(inputs, True)
@@ -414,6 +421,7 @@ class Model():
         for callback in callbacks:
             callback.on_train_batch_begin(batch)
         results = 0
+        # FIXME: If batch_size is different from others? Scale it?
         if self.sequential:
             dY_pred = self.loss_function.grad(
                 targets,
@@ -427,7 +435,7 @@ class Model():
                     for input_layer in layer.input_layers:
                         queue.append((input_layer, dY_pred))
 
-            batch_loss = self.loss_function(targets, outputs)
+            batch_loss = self.loss_function(targets, outputs) * scale
             for metric in self.metrics:
                 if hasattr(metric, "update_state"):
                     metric.update_state(targets, outputs)
@@ -438,7 +446,7 @@ class Model():
                 dY_pred = self.loss_function.grad(
                     targets[out_n],
                     outputs[out_n],
-                )
+                ) * scale
                 queue = [(self.get_output_layers()[out_n], dY_pred)]
                 while len(queue) > 0:
                     layer, dY_pred = queue.pop(0)
@@ -447,7 +455,7 @@ class Model():
                         for input_layer in layer.input_layers:
                             queue.append((input_layer, dY_pred))
 
-                batch_loss += self.loss_function(targets[out_n], outputs[out_n])
+                batch_loss += self.loss_function(targets[out_n], outputs[out_n]) * scale
                 for metric in self.metrics:
                     if hasattr(metric, "update_state"):
                         metric.update_state(targets[out_n], outputs[out_n])
@@ -462,34 +470,41 @@ class Model():
         return batch_loss, batch_metric_values
 
     def update(self, batch_loss):
+        """
+        Update the weights based on the batch_loss.
+        The weight delatas were computed in train_batch().
+        """
+        # FIXME? Need to pass the batch_loss to just the layers
+        # responsible for this loss (eg, in case of multiple
+        # output layers)
+        # FIXME: layers need to be able to accumulate delta changes
         for layer in self.layers:
             if not isinstance(layer, Input):
                 layer.update(batch_loss)
-        self.flush_gradients()
 
     def predict(self, inputs, retain_derived=False):
         inputs = np.array(inputs, dtype=float)
         results = []
-        # First, load the inputs:
+        # First, load the outputs of the input layers:
         if self.sequential:
-            cache = {self._input_layers[0].name: inputs}
+            outputs = {self._input_layers[0].name: inputs}
         else:
             if len(self._input_layers) > 1:
-                cache = {self._input_layers[i].name: input for i, input in enumerate(inputs)}
+                outputs = {self._input_layers[i].name: input for i, input in enumerate(inputs)}
             else:
-                cache = {self._input_layers[0].name: inputs}
+                outputs = {self._input_layers[0].name: inputs}
 
         # Propagate in topological order:
         for layer in topological_sort(self.get_input_layers()):
             if not isinstance(layer, Input):
-                inputs = [cache[in_layer.name] for in_layer in layer.input_layers]
+                inputs = [outputs[in_layer.name] for in_layer in layer.input_layers]
                 if len(inputs) == 1:
-                    cache[layer.name] = layer.forward(inputs[0], retain_derived=retain_derived)
+                    outputs[layer.name] = layer.forward(inputs[0], retain_derived=retain_derived)
                 else:
-                    cache[layer.name] = layer.forward(inputs, retain_derived=retain_derived)
+                    outputs[layer.name] = layer.forward(inputs, retain_derived=retain_derived)
 
         for layer in self.get_output_layers():
-            results.append(cache[layer.name])
+            results.append(outputs[layer.name])
         if self.sequential:
             return results[0]
         else:

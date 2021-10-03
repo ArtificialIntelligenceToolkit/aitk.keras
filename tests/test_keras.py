@@ -445,7 +445,68 @@ def test_metrics():
                         batch_size=3)
     for ta1, ta2 in zip(history.history["tolerance_accuracy"],
                         history.history["tolerance_accuracy_class"]):
-        assert ta1 == ta2
+        assert abs(ta1 - ta2) < 0.1
+
+def build_tolerance_accuracy(framework, tolerance=.1):
+    if framework == "tf":
+        import tensorflow.keras.backend as K
+    else:
+        import aitk.keras.backend as K
+
+    def tolerance_accuracy(targets, outputs):
+        return K.mean(
+            K.all(
+                K.less_equal(K.abs(targets - outputs),
+                             tolerance), axis=-1),
+            axis=-1)
+    return tolerance_accuracy
+
+
+def compare_metric_batch_size(batch_size, tolerance):
+    ta_tf = build_tolerance_accuracy("tf", tolerance)
+    model_tf = build_model("tf",
+                           optimizer="adam",
+                           metrics=[ta_tf])
+    weights = model_tf.get_weights()
+
+    ta_aitk = build_tolerance_accuracy("aitk", tolerance)
+    model_aitk = build_model("aitk",
+                             optimizer="adam",
+                             metrics=[ta_aitk])
+    model_aitk.set_weights(weights)
+
+    total_history_tf = []
+    total_history_aitk = []
+    
+    for epoch in range(100):
+        history_tf = model_tf.fit(inputs, targets, verbose=0, epochs=1, shuffle=False,
+                                  batch_size=batch_size)
+        history_aitk = model_aitk.fit(inputs, targets, verbose=0, epochs=1, shuffle=False,
+                                      batch_size=batch_size)
+
+        total_history_tf.extend(history_tf.history["tolerance_accuracy"])
+        total_history_aitk.extend(history_aitk.history["tolerance_accuracy"])
+
+        assert len(total_history_tf) == epoch + 1
+        assert len(total_history_aitk) == epoch + 1
+
+        if len(total_history_tf) > 50:
+            assert not (np.array(total_history_tf) == 0.0).all()
+            assert not (np.array(total_history_aitk) == 0.0).all()
+
+        count = 0
+        for ta1, ta2 in zip(total_history_tf, total_history_aitk):
+            if ta1 != ta2:
+                count += 1
+        if epoch == 0:
+            assert count == 0, "too many off: batch_size %s, epoch %s" % (batch_size, epoch)
+        else:
+            assert count < 3, "too many off: batch_size %s, epoch %s" % (batch_size, epoch)
+
+def test_metrics_compare():
+    compare_metric_batch_size(1, 0.45)
+    compare_metric_batch_size(4, 0.45)
+    compare_metric_batch_size(3, 0.45)
 
 def test_shuffle():
     from aitk.keras.optimizers import SGD
@@ -504,3 +565,51 @@ def test_no_shuffle():
             same = False
             break
     assert same
+
+def test_batch():
+    optimizer, loss = "adam", "mse"
+    
+    model_tf = build_model("tf", optimizer, loss)
+    tf_weights = model_tf.get_weights()
+
+    model_aitk = build_model("aitk", optimizer, loss)
+    model_aitk.set_weights(tf_weights)
+
+    compare_weights(model_tf, model_aitk)
+
+    for i in range(30):
+        outputs_tf = model_tf.predict(inputs)
+        outputs_aitk = model_aitk.predict(inputs)
+
+        epochs = 10
+        #print("epoch", optimizer, loss, i * epochs)
+        for j, (j1, j2) in enumerate(zip(outputs_tf, outputs_aitk)):
+            #print(i, j, j1, j2)
+            assert abs(j1 - j2) < MAX_DIFF, ("%s %s: outputs are too different" % (optimizer, loss))
+
+        model_tf.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False, batch_size=1)
+        model_aitk.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False, batch_size=1)
+
+def test_batch_uneven():
+    optimizer, loss = "adam", "mse"
+    
+    model_tf = build_model("tf", optimizer, loss)
+    tf_weights = model_tf.get_weights()
+
+    model_aitk = build_model("aitk", optimizer, loss)
+    model_aitk.set_weights(tf_weights)
+
+    compare_weights(model_tf, model_aitk)
+
+    for i in range(30):
+        outputs_tf = model_tf.predict(inputs)
+        outputs_aitk = model_aitk.predict(inputs)
+
+        epochs = 10
+        #print("epoch", optimizer, loss, i * epochs)
+        for j, (j1, j2) in enumerate(zip(outputs_tf, outputs_aitk)):
+            #print(i, j, j1, j2)
+            assert abs(j1 - j2) < MAX_DIFF, ("%s %s: outputs are too different" % (optimizer, loss))
+
+        model_tf.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False, batch_size=3)
+        model_aitk.fit(inputs, targets, epochs=epochs, verbose=0, shuffle=False, batch_size=3)

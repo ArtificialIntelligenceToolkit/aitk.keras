@@ -682,8 +682,8 @@ class NCELoss(ObjectiveBase):
             },
         }
 
-    def __call__(self, X, target, neg_samples=None, retain_derived=True):
-        return self.loss(X, target, neg_samples, retain_derived)
+    def __call__(self, target, X, neg_samples=None, retain_derived=True):
+        return self.loss(target, X, neg_samples, retain_derived)
 
     def __str__(self):
         keys = [
@@ -726,7 +726,7 @@ class NCELoss(ObjectiveBase):
                 self.parameters[k] = self.optimizer(self.parameters[k], v, k, cur_loss)
         self.flush_gradients()
 
-    def loss(self, X, target, neg_samples=None, retain_derived=True):
+    def loss(self, target, X, neg_samples=None, retain_derived=True):
         """
         Compute the NCE loss for a collection of inputs and associated targets.
 
