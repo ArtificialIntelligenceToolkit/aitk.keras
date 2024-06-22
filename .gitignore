@@ -1,5 +1,0 @@
-dist/
-build/
-*.pyc
-*~
-aitk.keras.egg-info
