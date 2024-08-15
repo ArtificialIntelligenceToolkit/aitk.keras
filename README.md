@@ -1,3 +1,7 @@
+# This code has been moved to [aitk](https://github.com/ArtificialIntelligenceToolkit/aitk)
+
+This is a archived repository.
+
 aitk.keras
 ==========
 
